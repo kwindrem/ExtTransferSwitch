@@ -54,7 +54,7 @@ TRANSLATIONS = [
     Translation('ok', 'alarm'),
     Translation('running', 'stopped'),
 #### added for ExtTransferSwitch package
-    Translation('generator input', 'grid input')
+    Translation('on generator', 'on grid')
 ]
 
 class SystemBus(dbus.bus.BusConnection):

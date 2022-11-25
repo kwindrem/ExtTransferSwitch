@@ -1,9 +1,52 @@
 This software interfaces an external transfer switch ahead of a MultiPlus AC input
+	changing the AC input current limit and and AC source type based on on grid/on generator
 
 A GX device digital input is connected to the external transfer switch to indicate
 	if the grid or generator is routed to the Multi's AC input
 	This service then makes changed to the AC input current limit and AC source(type)
 	grid/shore or generator
+
+Configuration:
+
+Install the ExtTransferSwitch pacakge (see below under Installation)
+
+Program a digital input for External transfer switch
+
+Connect an output from the transfer switch to this input to indicate
+	if the grid or generator source is being routed to the AC 1 input of the Multi.
+
+	The best signal to use is a grid power detection circuit.
+		A simle relay across the grid is probably fine for this.
+		This same signal would typically switch the transfer switch to the grid position.
+
+	The transfer switch may change state based on generator power being present.
+		If this is the case, the generator might not ever start when using this to feed the digital input.
+
+	Verify that the On Grid / On Generator state shown in the Device List tracks the actual state
+		of the transfer switch. If it is backwards, change Inverted swich in the device's setup menu.
+
+While On grid, set the grid input current limit and grid type (grid or shore).
+
+Cause the trasnfer switch to change state and while On Generator, set the grid input current limit again.
+
+Now the input current limit will switch between the grid and generator settings.
+
+If you make changes to the input current limit, those changes will be remembered and restored when the transfer switch
+returns to that position again.
+
+If you wish to prevent the generator from running when On Grid, make sure the system is not On Generator and
+	turn on the Do not run generator when AC1 is in use in:
+		Device List / Settings / Generator start/stop settings /Settings / Conditions
+	The transfer switch logic will turn this off when switching to On Generator and restore it when switching to On Grid.
+
+
+Installation:
+
+The easiest way to install this or other of my packages is to first install SetupHelper,
+then use its package install tool. Refer to the SetupHelper ReadMe for instructions.
+
+
+Background / internals :
 
 Two input types are reserved for a grid connection: grid or shore.
 	This selection is stored so that that specific selection is restored when
@@ -11,6 +54,13 @@ Two input types are reserved for a grid connection: grid or shore.
 
 In addition, the AC input current limit is saved when on both generator and grid
 	so that value can also be restored.
+	This is stored in dbus
+		/Settings/TransferSwitch/GridType
+
+In addition, the Do not run generator ... is saved when on grid
+	so that value can also be restored.
+	This is stored in dbus
+		/Settings/TransferSwitch/StopWhenAc1Available
 
 Separate grid and generator input current limits are needed for a tidy transition
 	between grid and generator.
@@ -18,9 +68,10 @@ Separate grid and generator input current limits are needed for a tidy transitio
 		/Settings/TransferSwitch/GridCurrentLimit
 		/Settings/TransferSwitch/GeneratorCurrentLimit
 
-When the transfer switch is set to grid, ...GridCurrentLimit is updated when
-	updating the AC input current limit through the normal mechanisms (various places in the GUI).
-	Likewise, ...GeneratorCurrentLimit is updated when the transfer switch is set to generator.
+The user has no access to /Settings/TransferSwitch/... parameters directly.
+Rather, these are updated when the transfer switch digital input changes state
+	That is the current settings are stored in /Settings/TransferSwitch/...
+		so they can be restored when the transfer switch changes state again
 
 A new digital input type "External transfer switch" allows the external transfer switch to
 	communicate with the this software.
@@ -28,10 +79,5 @@ A new digital input type "External transfer switch" allows the external transfer
 	when the transfer switch is in the generator position.
 	The logic can be inverted if the contact closes when on grid.
 	The invert control is located in the device list under the transfer switch device
-
-Setup:
-
-The easiest way to install this or other of my packages is to first install SetupHelper,
-then use its package install tool. Refer to the SetupHelper ReadMe for instructions.
 
 

@@ -84,9 +84,9 @@ MbPage {
 			return qsTr("Stopped")
 //// added for ExtTransferSwitch package
 		case 12:
-			return qsTr("Generator In")
+			return qsTr("On generator")
 		case 13:
-			return qsTr("Grid In")
+			return qsTr("On grid")
 		}
 
 		return qsTr("Unknown")

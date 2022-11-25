@@ -53,25 +53,21 @@ class Monitor:
 			vebusService = obj.GetText ()
 		except:
 			if self.dbusOk:
-				logging.warning ("Multi disappeared - /VebusService invalid")
+				logging.info ("Multi disappeared - /VebusService invalid")
 			self.veBusService = ""
 			self.dbusOk = False
 
 		if vebusService == "---":
 			if self.veBusService != "":
-				logging.warning ("Multi disappeared")
+				logging.info ("Multi disappeared")
 			self.veBusService = ""
 			self.dbusOk = False
 		elif self.veBusService == "" or vebusService != self.veBusService:
-			logging.warning ("discovered Multi at " + vebusService)
+			logging.info ("discovered Multi at " + vebusService)
 			self.veBusService = vebusService
 			try:
 				self.currentLimitObj = self.theBus.get_object (vebusService, "/Ac/ActiveIn/CurrentLimit")
-				# test for readable value
-				foo = self.currentLimitObj.GetValue ()
 				self.currentLimitIsAdjustableObj = self.theBus.get_object (vebusService, "/Ac/ActiveIn/CurrentLimitIsAdjustable")
-				# test for readable value
-				foo = self.currentLimitIsAdjustableObj.GetValue ()
 			except:
 				logging.error ("current limit dbus setup failed - changes can't be made")
 				self.dbusOK = False
@@ -84,11 +80,24 @@ class Monitor:
 				self.dbusOk = False
 				logging.error ("AC input dbus setup failed - changes can't be made")
 
+			# set up objects for stop when AC 1 available
+			#	there's one for "Generator" and one for "FischerPanda"
+			#	ignore errors if these aren't present
+			try:
+				if self.stopWhenAc1AvailableObj == None:
+					self.stopWhenAc1AvailableObj = self.theBus.get_object (dbusSettingsPath, "/Settings/Generator0/StopWhenAc1Available")
+			except:
+				self.stopWhenAc1AvailableObj = None
+			try:
+				if self.stopWhenAc1AvailableFpObj == None:
+					self.stopWhenAc1AvailableFpObj = self.theBus.get_object (dbusSettingsPath, "/Settings/FischerPanda0/StopWhenAc1Available")
+			except:
+				self.stopWhenAc1AvailableFpObj = None
 
 
 	def updateTransferSwitchState (self):
 		try:
-			# current input service is no longer valid
+			# current digital input is no longer valid
 			# search for a new one only every 10 seconds to avoid unnecessary processing
 			if (self.digitalInputTypeObj == None or self.digitalInputTypeObj.GetValue() != 11) and self.tsInputSearchDelay > 10:
 				newInputService = ""
@@ -137,6 +146,13 @@ class Monitor:
 
 	def transferToGrid (self):
 		if self.dbusOk:
+			# save current values for restore when switching back to generator
+			try:
+				self.DbusSettings['generatorCurrentLimit'] = self.currentLimitObj.GetValue ()
+			except:
+				logging.error ("dbus error AC input settings not saved switching to grid")
+
+
 			try:
 				self.acInputTypeObj.SetValue (self.DbusSettings['gridInputType'])
 				if self.currentLimitIsAdjustableObj.GetValue () == 1:
@@ -146,9 +162,31 @@ class Monitor:
 			except:
 				logging.error ("dbus error AC input settings not changed to grid")
 
+			try:
+				if self.stopWhenAc1AvailableObj != None:
+					self.stopWhenAc1AvailableObj.SetValue (self.DbusSettings['stopWhenAc1Avaiable'])
+				if self.stopWhenAc1AvailableFpObj != None:
+					self.stopWhenAc1AvailableFpObj.SetValue (self.DbusSettings['stopWhenAc1AvaiableFp'])
+			except:
+				logging.error ("stopWhenAc1Available update failed when switching to grid")
 
 	def transferToGenerator (self):
 		if self.dbusOk:
+			# save current values for restore when switching back to grid
+			try:
+				self.DbusSettings['gridCurrentLimit'] = self.currentLimitObj.GetValue ()
+				self.DbusSettings['gridInputType'] = self.acInputTypeObj.GetValue ()
+				if self.stopWhenAc1AvailableObj != None:
+					self.DbusSettings['stopWhenAc1Avaiable'] = self.stopWhenAc1AvailableObj.GetValue ()
+				else:
+					self.DbusSettings['stopWhenAc1Avaiable'] = 0
+				if self.stopWhenAc1AvailableFpObj != None:
+					self.DbusSettings['stopWhenAc1AvaiableFp'] = self.stopWhenAc1AvailableFpObj.GetValue ()
+				else:
+					self.DbusSettings['stopWhenAc1AvaiableFp'] = 0
+			except:
+				logging.error ("dbus error AC input and stop when AC1 available settings not saved switching to generator")
+
 			try:
 				self.acInputTypeObj.SetValue (2)
 				if self.currentLimitIsAdjustableObj.GetValue () == 1:
@@ -158,14 +196,19 @@ class Monitor:
 			except:
 				logging.error ("dbus error AC input settings not changed to generator")
 
+			try:
+				if self.stopWhenAc1AvailableObj != None:
+					self.stopWhenAc1AvailableObj.SetValue (0)
+				if self.stopWhenAc1AvailableFpObj != None:
+					self.stopWhenAc1AvailableFpObj.SetValue (0)
+			except:
+				logging.error ("stopWhenAc1Available update failed switching to generator")
+
 
 	def background (self):
 
-		#startTime = time.time()
+		##startTime = time.time()
  
-		if self.settleDelay < 10:
-			self.settleDelay += 1
-
 		self.updateTransferSwitchState ()
 		if self.transferSwitchActive:
 			self.getVeBusObjects ()
@@ -174,39 +217,16 @@ class Monitor:
 		if self.dbusOk and self.transferSwitchActive:
 			# process transfer switch state change
 			if self.lastOnGenerator != None and self.onGenerator != self.lastOnGenerator:
-				self.settleDelay = 0
 				if self.onGenerator:
 					self.transferToGenerator ()
 				else:
 					self.transferToGrid ()
 			self.lastOnGenerator = self.onGenerator
-
-			# wait 5 passes (seconds) before looking for input current limit or ac input mode changes
-			if self.settleDelay >= 5:
-				try: 
-					# input current limit has changed - update transfer switch stored values
-					currentLimit = self.currentLimitObj.GetValue ()
-					if self.lastCurrentLimit == None or currentLimit != self.lastCurrentLimit:
-						self.lastCurrentLimit = currentLimit
-						if self.onGenerator:
-							self.DbusSettings['generatorCurrentLimit'] = currentLimit
-						else:
-							self.DbusSettings['gridCurrentLimit'] = currentLimit
-
-					# AC input type has changed and not on generator - update transfer switch stored value
-					if not self.onGenerator:
-						inputType = self.acInputTypeObj.GetValue ()
-						if self.lastInputType == None or inputType != self.lastInputType:
-							self.lastInputType = inputType
-							self.DbusSettings['gridInputType'] = inputType
-				except:
-					logging.error ("dbus error - transfer switch settings not updated")
-					self.transferToGrid ()
 		elif self.onGenerator:
 			self.transferToGrid ()
 
-		#stopTime = time.time()
-		#print ("#### background time %0.3f" % (stopTime - startTime))
+		##stopTime = time.time()
+		##print ("#### background time %0.3f" % (stopTime - startTime))
 		return True
 
 
@@ -220,16 +240,15 @@ class Monitor:
 		self.acInputTypeObj = None
 		self.currentLimitObj = None
 		self.currentLimitIsAdjustableObj = None
+		self.stopWhenAc1AvailableObj = None
+		self.stopWhenAc1AvailableFpObj = None
 
 		self.digitalInputTypeObj = None
 		self.transferSwitchStateObj = None
 
-		self.lastCurrentLimit = None
-		self.lastInputType = None
 		self.lastOnGenerator = None
 		self.transferSwitchActive = False
 		self.dbusOk = False
-		self.settleDelay = 0
 		self.tsInputSearchDelay = 99 # allow serch to occur immediately
 
 		# create / attach local settings
@@ -237,6 +256,8 @@ class Monitor:
 			'gridCurrentLimit': [ '/Settings/TransferSwitch/GridCurrentLimit', 0.0, 0.0, 0.0 ],
 			'generatorCurrentLimit': [ '/Settings/TransferSwitch/GeneratorCurrentLimit', 0.0, 0.0, 0.0 ],
 			'gridInputType': [ '/Settings/TransferSwitch/GridType', 0, 0, 0 ],
+			'stopWhenAc1Avaiable': [ '/Settings/TransferSwitch/StopWhenAc1Available', 0, 0, 0 ],
+			'stopWhenAc1AvaiableFp': [ '/Settings/TransferSwitch/StopWhenAc1AvailableFp', 0, 0, 0 ],
 						}
 		self.DbusSettings = SettingsDevice(bus=self.theBus, supportedSettings=settingsList,
 								timeout = 10, eventCallback=None )
