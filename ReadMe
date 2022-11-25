@@ -1,0 +1,37 @@
+This software interfaces an external transfer switch ahead of a MultiPlus AC input
+
+A GX device digital input is connected to the external transfer switch to indicate
+	if the grid or generator is routed to the Multi's AC input
+	This service then makes changed to the AC input current limit and AC source(type)
+	grid/shore or generator
+
+Two input types are reserved for a grid connection: grid or shore.
+	This selection is stored so that that specific selection is restored when
+	switching back from generator
+
+In addition, the AC input current limit is saved when on both generator and grid
+	so that value can also be restored.
+
+Separate grid and generator input current limits are needed for a tidy transition
+	between grid and generator.
+	These are stored in dbus
+		/Settings/TransferSwitch/GridCurrentLimit
+		/Settings/TransferSwitch/GeneratorCurrentLimit
+
+When the transfer switch is set to grid, ...GridCurrentLimit is updated when
+	updating the AC input current limit through the normal mechanisms (various places in the GUI).
+	Likewise, ...GeneratorCurrentLimit is updated when the transfer switch is set to generator.
+
+A new digital input type "External transfer switch" allows the external transfer switch to
+	communicate with the this software.
+	This input should be connected to an isolated contact on the transfer switch that closes
+	when the transfer switch is in the generator position.
+	The logic can be inverted if the contact closes when on grid.
+	The invert control is located in the device list under the transfer switch device
+
+Setup:
+
+The easiest way to install this or other of my packages is to first install SetupHelper,
+then use its package install tool. Refer to the SetupHelper ReadMe for instructions.
+
+
