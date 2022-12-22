@@ -1,6 +1,9 @@
-v1.0:
-	initial release
+v2.1:
+	add support for v3.00~14
 
 v2.0:
 	change Don't run generator when on AC 1 as part of transfer swich logic
 		this will inhibit generator run when on grid
+
+v1.0:
+	initial release
