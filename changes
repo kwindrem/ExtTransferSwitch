@@ -1,3 +1,6 @@
+v2.3:
+	added support for v3.00~32
+
 v2.2:
 	fixed: dbus-spy not displaying parameters
 	added support for v3.00~17
