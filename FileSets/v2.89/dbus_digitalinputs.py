@@ -41,6 +41,7 @@ INPUTTYPES = [
     'Generator',
 #### added for ExtTransferSwitch package
     'Generic I/O',	#added to make following entry line up across versions
+#### added for ExtTransferSwitch package -- must be LAST in the list
     'Transfer switch'
 ]
 

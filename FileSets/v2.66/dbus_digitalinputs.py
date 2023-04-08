@@ -39,7 +39,7 @@ INPUTTYPES = [
     'Fire alarm',
     'CO2 alarm',
     'Generator',
-#### added for ExtTransferSwitch package
+#### added for ExtTransferSwitch package -- must be LAST in the list
     'Generic I/O',	#added to make following entry line up across versions
     'Transfer switch'
 ]

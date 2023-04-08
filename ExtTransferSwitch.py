@@ -23,6 +23,7 @@ import platform
 import argparse
 import logging
 import sys
+import subprocess
 import os
 import time
 import dbus
@@ -100,14 +101,14 @@ class Monitor:
 		try:
 			# current digital input is no longer valid
 			# search for a new one only every 10 seconds to avoid unnecessary processing
-			if (self.digitalInputTypeObj == None or self.digitalInputTypeObj.GetValue() != 11) and self.tsInputSearchDelay > 10:
+			if (self.digitalInputTypeObj == None or self.digitalInputTypeObj.GetValue() != self.extTransferDigInputType) and self.tsInputSearchDelay > 10:
 				newInputService = ""
 				for service in self.theBus.list_names():
 					# found a digital input service, now check the type
 					if service.startswith ("com.victronenergy.digitalinput"):
 						self.digitalInputTypeObj = self.theBus.get_object (service, '/Type')
 						# found it!
-						if self.digitalInputTypeObj.GetValue() == 11:
+						if self.digitalInputTypeObj.GetValue() == self.extTransferDigInputType:
 							newInputService = service
 							break
  
@@ -128,14 +129,16 @@ class Monitor:
 
 			if self.transferSwitchStateObj != None:
 				try:
-					if self.transferSwitchStateObj.GetValue () == 12:
+					if self.dbusOk and self.transferSwitchStateObj.GetValue () == 12: ## 12 is the on generator value
 						self.onGenerator = True
 					else:
 						self.onGenerator = False
 					self.transferSwitchActive = True
 				except:
+					self.onGenerator = False
 					self.transferSwitchActive = False
 			else:
+				self.onGenerator = False
 				self.transferSwitchActive = False
 
 		except:
@@ -246,6 +249,8 @@ class Monitor:
 
 		self.digitalInputTypeObj = None
 		self.transferSwitchStateObj = None
+		self.digInputMaxTypeObj = None
+		self.extTransferDigInputType = None
 
 		self.lastOnGenerator = None
 		self.transferSwitchActive = False
@@ -263,6 +268,15 @@ class Monitor:
 		self.DbusSettings = SettingsDevice(bus=self.theBus, supportedSettings=settingsList,
 								timeout = 10, eventCallback=None )
 
+		# get the maximum digital input type - this will be the type for Exeternal Transfer Switch
+		try:
+			digInputMaxTypeObj = self.theBus.get_object (dbusSettingsPath, "/Settings/DigitalInput/1/Type")
+			if digInputMaxTypeObj != None:
+				self.extTransferDigInputType = digInputMaxTypeObj.GetMax ()
+		except:
+			pass
+		logging.info ("Ext Transfer Switch digital input type value: " + str (self.extTransferDigInputType))
+
 		GLib.timeout_add (1000, self.background)
 		return None
 
@@ -276,7 +290,24 @@ def main():
 	# Have a mainloop, so we can send/receive asynchronous calls to and from dbus
 	DBusGMainLoop(set_as_default=True)
 
-	logging.info (">>>>>>>>>>>>>>>> ExtTransferSwitch starting <<<<<<<<<<<<<<<<") # TODO: add version
+	installedVersion = "(no version installed)"
+	versionFile = "/etc/venus/installedVersion-ExtTransferSwitch"
+	if os.path.exists (versionFile):
+		try:
+			proc = subprocess.Popen (["cat", versionFile], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		except:
+			pass
+		else:
+			proc.wait()
+			# convert from binary to string
+			stdout, stderr = proc.communicate ()
+			stdout = stdout.decode ().strip ()
+			stderr = stderr.decode ().strip ()
+			returnCode = proc.returncode
+			if proc.returncode == 0:
+				installedVersion = stdout
+
+	logging.info (">>>>>>>>>>>>>>>> ExtTransferSwitch starting " + installedVersion + " <<<<<<<<<<<<<<<<")
 
 	Monitor ()
 

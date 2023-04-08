@@ -63,6 +63,9 @@ if $filesUpdated ; then
     restartGui=true
 fi
 
+logMessage "restarting dbus-digitalinputs service"
+svc -t "/service/dbus-digitalinputs"
+
 # thats all folks - SCRIPT EXITS INSIDE THE FUNCTION
 endScript
 

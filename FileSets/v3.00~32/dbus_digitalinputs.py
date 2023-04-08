@@ -41,7 +41,7 @@ INPUTTYPES = [
     'Generator',
     'Generic I/O',
     'Touch enable',
-#### added for ExtTransferSwitch package
+#### added for ExtTransferSwitch package -- must be LAST in the list
     'Transfer switch'
 ]
 
