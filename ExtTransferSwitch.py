@@ -56,7 +56,7 @@ class Monitor:
 		except:
 			if self.dbusOk:
 				logging.info ("Multi disappeared - /VebusService invalid")
-			self.veBusService = ""
+			veBusService = ""
 			self.dbusOk = False
 
 		if vebusService == "---":

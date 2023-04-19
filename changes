@@ -1,3 +1,6 @@
+v2.5:
+	fixed: not switching sources or other parameters after boot
+
 v2.4:
 	fixed: not functional in the later v3.00 betas
 
