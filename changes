@@ -1,3 +1,8 @@
+v2.6:
+	support add warm-up / cool-down logic
+		(same as logic in GuiMods, but scaled back)
+		GuiMods version of startstop.py has priority
+
 v2.5:
 	fixed: not switching sources or other parameters after boot
 

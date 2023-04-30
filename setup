@@ -39,6 +39,15 @@ if [ $scriptAction == 'INSTALL' ] ; then
     updateActiveFile "/opt/victronenergy/dbus-digitalinputs/dbus_digitalinputs.py"
     updateActiveFile "/opt/victronenergy/dbus-modbustcp/attributes.csv"
 
+	# is GuiMods versions, do not replace
+	file="/opt/victronenergy/dbus-generator-starter/startstop.py"
+	if [ -f "$file" ] && (( $(grep -c "#### GuiMods" "$file") == 0 )); then
+		    updateActiveFile $file
+		if $thisFileUpdated; then
+			restartGeneratorService=true
+		fi
+	fi
+
     installService $packageName
 
     if $filesUpdated ; then
@@ -56,11 +65,24 @@ if [ $scriptAction == 'UNINSTALL' ] ; then
 	restoreActiveFile "/opt/victronenergy/dbus-digitalinputs/dbus_digitalinputs.py"
 	restoreActiveFile "/opt/victronenergy/dbus-modbustcp/attributes.csv"
 
+	# is GuiMods versions, do not uninstall
+	file="/opt/victronenergy/dbus-generator-starter/startstop.py"
+	if [ -f "$file" ] && (( $(grep -c "#### GuiMods" "$file") == 0 )); then
+		    	restoreActiveFile $file
+		if $thisFileUpdated; then
+			restartGeneratorService=true
+		fi
+	fi
+
     removeService $packageName
 fi
 
 if $filesUpdated ; then
     restartGui=true
+fi
+if $restartGeneratorService ; then
+    logMessage "restarting dbus-generator-starter service"
+    svc -t /service/dbus-generator-starter
 fi
 
 logMessage "restarting dbus-digitalinputs service"

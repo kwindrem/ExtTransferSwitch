@@ -4,6 +4,8 @@
 # of a MultiPlus inverter/charger.
 #
 # This package should not be used on Quattros since they have an internal transfer swich.
+# However, functionality with Quattro should be correct if the external transfer switch
+# is connected to AC 1 In
 #
 # A new type of digital input is defined to provide select grid or generator input profiles
 #

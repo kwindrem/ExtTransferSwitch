@@ -1,6 +1,17 @@
 This software interfaces an external transfer switch ahead of a MultiPlus AC input
 	changing the AC input current limit and and AC source type based on on grid/on generator
 
+ExtTransferSwitch includes support for generator warm-up and cool-down added in Venus OS v3.00~37
+The same functionality is included in GuiMods, however there are additional enhancements
+to the generator interface in GuiMods. Installing GuiMods is recommended.
+		
+
+Note: For use with MultiPlus (and MultiPlus 2) inverter/chargers only.
+
+	Quattro inverter/chargers have two AC inputs and an internal transfer switch
+	which is normally used to switch between grid and generator.
+	If an external transfer switch is used with a Quattro, insure it is on AC 1 In.
+
 A GX device digital input is connected to the external transfer switch to indicate
 	if the grid or generator is routed to the Multi's AC input
 	This service then makes changed to the AC input current limit and AC source(type)
@@ -27,7 +38,8 @@ Connect an output from the transfer switch to this input to indicate
 
 While On grid, set the grid input current limit and grid type (grid or shore).
 
-Cause the trasnfer switch to change state and while On Generator, set the grid input current limit again.
+Cause the transfer switch to change state and while On Generator, set the input current limit again,
+	this time for the generator values.
 
 Now the input current limit will switch between the grid and generator settings.
 

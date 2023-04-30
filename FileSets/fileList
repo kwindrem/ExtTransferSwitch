@@ -2,3 +2,4 @@
 /opt/victronenergy/gui/qml/MbItemDigitalInput.qml
 /opt/victronenergy/dbus-digitalinputs/dbus_digitalinputs.py
 /opt/victronenergy/dbus-modbustcp/attributes.csv
+/opt/victronenergy/dbus-generator-starter/startstop.py
