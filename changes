@@ -1,3 +1,6 @@
+v2.7:
+	code cleanup - no functional change
+
 v2.6:
 	support add warm-up / cool-down logic
 		(same as logic in GuiMods, but scaled back)
