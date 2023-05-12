@@ -1,3 +1,7 @@
+v2.8:
+	add support for generator on AC input 2
+	add support for v3.00~41
+
 v2.7:
 	code cleanup - no functional change
 
