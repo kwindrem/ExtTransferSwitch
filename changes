@@ -1,3 +1,6 @@
+v2.10:
+	add support for v3.00~42 (includes generator on AC 2)
+
 v2.8/2.9:
 	add support for generator on AC input 2
 	add support for v3.00~41
