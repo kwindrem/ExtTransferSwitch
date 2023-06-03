@@ -1,3 +1,7 @@
+v2.13:
+	add support for v3.10~2
+	streamlined transition code - no functional changes
+
 v2.12:
 	add support for transfer switch on AC 2 in (Quattro)
 

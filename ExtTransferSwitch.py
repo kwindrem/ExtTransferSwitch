@@ -18,8 +18,8 @@
 #	which of it's sources is switched to its output
 #
 # For Quattro, the /Settings/TransferSwitch/TransferSwitchOnAc2 tells this program where the transfer switch is connected:
-#	1 if connected to AC 2 In
 #	0 if connected to AC 1 In
+#	1 if connected to AC 2 In
 
 import platform
 import argparse
@@ -100,52 +100,47 @@ class Monitor:
 
 		# check to see where the transfer switch is connected
 		if self.numberOfAcInputs == 0:
-			transferSwitchLocaiton = 0
+			transferSwitchLocation = 0
 		elif self.numberOfAcInputs == 1:
-			transferSwitchLocaiton = 1
+			transferSwitchLocation = 1
 			self.numberOfAcInputs > 1 and self.DbusSettings['transferSwitchOnAc2'] == 1
 		elif self.DbusSettings['transferSwitchOnAc2'] == 1:
-			transferSwitchLocaiton = 2
+			transferSwitchLocation = 2
 		else:
-			transferSwitchLocaiton = 1
+			transferSwitchLocation = 1
 		# if changed, trigger refresh of object pointers
-		if transferSwitchLocaiton != self.transferSwitchLocaiton:
-			logging.info ("Transfer switch is on AC %s in" % transferSwitchLocaiton)
-			self.transferSwitchLocaiton = transferSwitchLocaiton
+		if transferSwitchLocation != self.transferSwitchLocation:
+			logging.info ("Transfer switch is on AC %s in" % transferSwitchLocation)
+			self.transferSwitchLocation = transferSwitchLocation
 			self.stopWhenAcAvailableObj = None
 			self.stopWhenAcAvailableFpObj = None
-			self.acInputTypeObj = None
-
-		try:
-			if self.acInputTypeObj == None:
-				if self.transferSwitchLocaiton == 2:
+			try:
+				if self.transferSwitchLocation == 2:
 					self.acInputTypeObj = self.theBus.get_object (dbusSettingsPath, "/Settings/SystemSetup/AcInput2")
 				else:
 					self.acInputTypeObj = self.theBus.get_object (dbusSettingsPath, "/Settings/SystemSetup/AcInput1")
-			self.dbusOk = True
-		except:
-			self.dbusOk = False
-			logging.error ("AC input dbus setup failed - changes can't be made")
+				self.dbusOk = True
+			except:
+				self.dbusOk = False
+				logging.error ("AC input dbus setup failed - changes can't be made")
 
-		# set up objects for stop when AC available
-		#	there's one for "Generator" and one for "FischerPanda"
-		#	ignore errors if these aren't present
-		try:
-			if self.stopWhenAcAvailableObj == None:
-				if self.transferSwitchLocaiton == 2:
+			# set up objects for stop when AC available
+			#	there's one for "Generator" and one for "FischerPanda"
+			#	ignore errors if these aren't present
+			try:
+				if self.transferSwitchLocation == 2:
 					self.stopWhenAcAvailableObj = self.theBus.get_object (dbusSettingsPath, "/Settings/Generator0/StopWhenAc2Available")
 				else:
 					self.stopWhenAcAvailableObj = self.theBus.get_object (dbusSettingsPath, "/Settings/Generator0/StopWhenAc1Available")
-		except:
-			self.stopWhenAcAvailableObj = None
-		try:
-			if self.stopWhenAcAvailableFpObj == None:
-				if self.transferSwitchLocaiton == 2:
+			except:
+				self.stopWhenAcAvailableObj = None
+			try:
+				if self.transferSwitchLocation == 2:
 					self.stopWhenAcAvailableFpObj = self.theBus.get_object (dbusSettingsPath, "/Settings/FischerPanda0/StopWhenAc2Available")
 				else:
 					self.stopWhenAcAvailableFpObj = self.theBus.get_object (dbusSettingsPath, "/Settings/FischerPanda0/StopWhenAc1Available")
-		except:
-			self.stopWhenAcAvailableFpObj = None
+			except:
+				self.stopWhenAcAvailableFpObj = None
 
 
 	def updateTransferSwitchState (self):
@@ -201,6 +196,7 @@ class Monitor:
 
 	def transferToGrid (self):
 		if self.dbusOk:
+			logging.info ("#### to grid")
 			# save current values for restore when switching back to generator
 			try:
 				self.DbusSettings['generatorCurrentLimit'] = self.currentLimitObj.GetValue ()
@@ -218,48 +214,30 @@ class Monitor:
 				logging.error ("dbus error AC input settings not changed to grid")
 
 			try:
-
 				if self.stopWhenAcAvailableObj != None:
-					if self.transferSwitchLocaiton == 2:
-						self.stopWhenAcAvailableObj.SetValue (self.DbusSettings['stopWhenAc2Avaiable'])
-					else:
-						self.stopWhenAcAvailableObj.SetValue (self.DbusSettings['stopWhenAc1Avaiable'])
+					self.stopWhenAcAvailableObj.SetValue (self.DbusSettings['stopWhenAcAvaiable'])
 				if self.stopWhenAcAvailableFpObj != None:
-					if self.transferSwitchLocaiton == 2:
-						self.stopWhenAcAvailableFpObj.SetValue (self.DbusSettings['stopWhenAc2AvaiableFp'])
-					else:
-						self.stopWhenAcAvailableFpObj.SetValue (self.DbusSettings['stopWhenAc1AvaiableFp'])
+					self.stopWhenAcAvailableFpObj.SetValue (self.DbusSettings['stopWhenAcAvaiableFp'])
 			except:
 				logging.error ("stopWhenAcAvailable update failed when switching to grid")
 
 	def transferToGenerator (self):
 		if self.dbusOk:
+			logging.info ("#### to generator")
 			# save current values for restore when switching back to grid
 			try:
 				self.DbusSettings['gridCurrentLimit'] = self.currentLimitObj.GetValue ()
 				self.DbusSettings['gridInputType'] = self.acInputTypeObj.GetValue ()
 				if self.stopWhenAcAvailableObj != None:
-					if self.transferSwitchLocaiton == 2:
-						self.DbusSettings['stopWhenAc2Avaiable'] = self.stopWhenAcAvailableObj.GetValue ()
-					else:
-						self.DbusSettings['stopWhenAc1Avaiable'] = self.stopWhenAcAvailableObj.GetValue ()
+					self.DbusSettings['stopWhenAcAvaiable'] = self.stopWhenAcAvailableObj.GetValue ()
 				else:
-					if self.transferSwitchLocaiton == 2:
-						self.DbusSettings['stopWhenAc2Avaiable'] = 0
-					else:
-						self.DbusSettings['stopWhenAc1Avaiable'] = 0
+					self.DbusSettings['stopWhenAcAvaiable'] = 0
 				if self.stopWhenAcAvailableFpObj != None:
-					if self.transferSwitchLocaiton == 2:
-						self.DbusSettings['stopWhenAc2AvaiableFp'] = self.stopWhenAcAvailableFpObj.GetValue ()
-					else:
-						self.DbusSettings['stopWhenAc1AvaiableFp'] = self.stopWhenAcAvailableFpObj.GetValue ()
+					self.DbusSettings['stopWhenAcAvaiableFp'] = self.stopWhenAcAvailableFpObj.GetValue ()
 				else:
-					if self.transferSwitchLocaiton == 2:
-						self.DbusSettings['stopWhenAc2AvaiableFp'] = 0
-					else:
-						self.DbusSettings['stopWhenAc1AvaiableFp'] = 0
+					self.DbusSettings['stopWhenAcAvaiableFp'] = 0
 			except:
-				logging.error ("dbus error AC input and stop when AC available settings not saved switching to generator")
+				logging.error ("dbus error AC input and stop when AC available settings not saved when switching to generator")
 
 			try:
 				self.acInputTypeObj.SetValue (2)
@@ -268,7 +246,7 @@ class Monitor:
 				else:
 					logging.warning ("Input current limit not adjustable - not changed")
 			except:
-				logging.error ("dbus error AC input settings not changed to generator")
+				logging.error ("dbus error AC input settings not changed when switching to generator")
 
 			try:
 				if self.stopWhenAcAvailableObj != None:
@@ -326,7 +304,7 @@ class Monitor:
 		self.lastOnGenerator = None
 		self.transferSwitchActive = False
 		self.dbusOk = False
-		self.transferSwitchLocaiton = 0
+		self.transferSwitchLocation = 0
 		self.tsInputSearchDelay = 99 # allow serch to occur immediately
 
 		# create / attach local settings
@@ -334,10 +312,8 @@ class Monitor:
 			'gridCurrentLimit': [ '/Settings/TransferSwitch/GridCurrentLimit', 0.0, 0.0, 0.0 ],
 			'generatorCurrentLimit': [ '/Settings/TransferSwitch/GeneratorCurrentLimit', 0.0, 0.0, 0.0 ],
 			'gridInputType': [ '/Settings/TransferSwitch/GridType', 0, 0, 0 ],
-			'stopWhenAc1Avaiable': [ '/Settings/TransferSwitch/StopWhenAc1Available', 0, 0, 0 ],
-			'stopWhenAc2Avaiable': [ '/Settings/TransferSwitch/StopWhenAc2Available', 0, 0, 0 ],
-			'stopWhenAc1AvaiableFp': [ '/Settings/TransferSwitch/StopWhenAc1AvailableFp', 0, 0, 0 ],
-			'stopWhenAc2AvaiableFp': [ '/Settings/TransferSwitch/StopWhenAc2AvailableFp', 0, 0, 0 ],
+			'stopWhenAcAvaiable': [ '/Settings/TransferSwitch/StopWhenAcAvailable', 0, 0, 0 ],
+			'stopWhenAcAvaiableFp': [ '/Settings/TransferSwitch/StopWhenAcAvailableFp', 0, 0, 0 ],
 			'transferSwitchOnAc2': [ '/Settings/TransferSwitch/TransferSwitchOnAc2', 0, 0, 0 ],
 						}
 		self.DbusSettings = SettingsDevice(bus=self.theBus, supportedSettings=settingsList,
