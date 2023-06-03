@@ -20,6 +20,20 @@ MbPage {
 		bind: service.path("/DeviceInstance")
 	}
 
+//// added for ExtTransferSwitch package
+	VBusItem
+	{
+		id: ac2connectedItem
+		bind: Utils.path ("com.victronenergy.system", "/Ac/In/1/Connected")
+	}
+	property bool showTransferSwitchConnection: ac2connectedItem.valid
+	VBusItem
+	{
+		id: typeItem
+		bind: service.path("/Type")
+	}
+	property bool isTransferSwitch: typeItem.valid && typeItem.value == 12
+
 	// Handle translations
 	function getType(type){
 		switch (type) {
@@ -114,6 +128,20 @@ MbPage {
 					bindPrefix: root.bindPrefix
 				}
 			}
+		}
+
+//// added for ExtTransferSwitch package 
+		MbItemOptions
+		{
+            id: extTransferSwitch
+			description: qsTr("External transfer switch connection")
+            bind: Utils.path ("com.victronenergy.settings/Settings", "/TransferSwitch/TransferSwitchOnAc2")
+			possibleValues:
+			[
+				MbOption {description: qsTr("AC 1 in"); value: 0},
+				MbOption {description: qsTr("AC 2 in"); value: 1}
+			]
+			visible: root.isTransferSwitch && root.showTransferSwitchConnection
 		}
 	}
 }

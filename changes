@@ -1,3 +1,6 @@
+v2.12:
+	add support for transfer switch on AC 2 in (Quattro)
+
 v2.11:
 	add support for v3.00 - no functional changes
 

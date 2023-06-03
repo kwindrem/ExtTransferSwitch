@@ -5,12 +5,9 @@ ExtTransferSwitch includes support for generator warm-up and cool-down added in 
 The same functionality is included in GuiMods, however there are additional enhancements
 to the generator interface in GuiMods. Installing GuiMods is recommended.
 		
-
-Note: For use with MultiPlus (and MultiPlus 2) inverter/chargers only.
-
-	Quattro inverter/chargers have two AC inputs and an internal transfer switch
-	which is normally used to switch between grid and generator.
-	If an external transfer switch is used with a Quattro, insure it is on AC 1 In.
+Note: changes added in Venus OS v3.00 and changes added to Multi/Quattro in fimware 502,
+	support a generator on AC 2 in.
+	These are required for this package to work on a Quattro's AC 2 input
 
 A GX device digital input is connected to the external transfer switch to indicate
 	if the grid or generator is routed to the Multi's AC input
@@ -23,7 +20,10 @@ Install the ExtTransferSwitch pacakge (see below under Installation)
 
 Program a digital input for External transfer switch
 
-Connect an output from the transfer switch to this input to indicate
+For Quattros, select if the transfer switch is connected to AC 1 in or AC 2 in.
+	(for Multis, this selection does not exist since there is only one AC input.)
+
+Connect an output from the transfer switch to the GX device digital input to indicate
 	if the grid or generator source is being routed to the AC 1 input of the Multi.
 
 	The best signal to use is a grid power detection circuit.
@@ -32,6 +32,7 @@ Connect an output from the transfer switch to this input to indicate
 
 	The transfer switch may change state based on generator power being present.
 		If this is the case, the generator might not ever start when using this to feed the digital input.
+		Install a separate grid power detection circuit to insure proper behavior.
 
 	Verify that the On Grid / On Generator state shown in the Device List tracks the actual state
 		of the transfer switch. If it is backwards, change Inverted swich in the device's setup menu.
@@ -73,6 +74,7 @@ In addition, the Do not run generator ... is saved when on grid
 	so that value can also be restored.
 	This is stored in dbus
 		/Settings/TransferSwitch/StopWhenAc1Available
+		/Settings/TransferSwitch/StopWhenAc2Available
 
 Separate grid and generator input current limits are needed for a tidy transition
 	between grid and generator.
