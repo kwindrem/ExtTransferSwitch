@@ -42,7 +42,7 @@ try:
 except ImportError:
 	import gobject as GLib # for Python 2
 
-# add the path to our own packages for import
+# add the path to our own packages for import ############################
 # use an established Victron service to maintain compatiblity
 sys.path.insert(1, os.path.join('/opt/victronenergy/dbus-systemcalc-py', 'ext', 'velib_python'))
 from vedbus import VeDbusService
@@ -51,10 +51,11 @@ from settingsdevice import SettingsDevice
 
 class Monitor:
 
+	vebusService = ""
+
 	def getVeBusObjects (self):
 		# invalidate all local parameters if transfer switch is not active
 		if not self.transferSwitchActive:
-			veBusService = ""
 			self.dbusOk = False
 			self.numberOfAcInputs = 0
 			self.stopWhenAcAvailableObj = None
@@ -68,7 +69,6 @@ class Monitor:
 		except:
 			if self.dbusOk:
 				logging.info ("Multi/Quattro disappeared - /VebusService invalid")
-			veBusService = ""
 			self.dbusOk = False
 			self.numberOfAcInputs = 0
 			self.acInputTypeObj = None

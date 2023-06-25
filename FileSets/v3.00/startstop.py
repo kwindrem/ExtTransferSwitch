@@ -275,6 +275,7 @@ class StartStop(object):
 		self._coolDownEndTime = 0
 		self._ac1isIgnored = False
 		self._ac2isIgnored = False
+		self._activeAcInIsIgnored = False 
 		self._acInIsGenerator = False
 		self._generatorAcInput = 0
 
@@ -524,7 +525,7 @@ class StartStop(object):
 		# update cool down end time while running and generator has the load
 		# this is done because acInIsGenerator may change by an external transfer switch
 		#	and the input type changed by the ExtTransferSwitch service
-		if running and not self._ac1isIgnored and self._acInIsGenerator:
+		if running and not self._activeAcInIsIgnored and self._acInIsGenerator:
 			self._coolDownEndTime = self._currentTime + self._settings['cooldowntime']
 #### end ExtTransferSwitch warm-up / cool-down
 
@@ -621,14 +622,13 @@ class StartStop(object):
 			  or activecondition == 'manual'):
 			self._stop_generator()
 
+#### ExtTransferSwitch warm-up / cool-down - rewrote so acInIsGenerator is updated even if alarm is disabled
 	def _detect_generator_at_acinput(self):
+#### ExtTransferSwitch warm-up / cool-down
+		self._acInIsGenerator = False	# covers all conditions that result in a return
+
 		state = self._dbusservice['/State']
-
 		if state == States.STOPPED:
-			self._reset_acpower_inverter_input()
-			return
-
-		if self._settings['nogeneratoratacinalarm'] == 0:
 			self._reset_acpower_inverter_input()
 			return
 
@@ -638,8 +638,6 @@ class StartStop(object):
 
 		# Path not supported, skip evaluation
 		if activein_state == None:
-#### ExtTransferSwitch warm-up / cool-down
-			self._acInIsGenerator = False
 			return
 
 		# Sources 0 = Not available, 1 = Grid, 2 = Generator, 3 = Shore
@@ -649,13 +647,23 @@ class StartStop(object):
 		activein_connected = activein_state == 1
 
 #### ExtTransferSwitch warm-up / cool-down
-		self._acInIsGenerator = False
+		if self._settings['nogeneratoratacinalarm'] == 0:
+			processAlarm = False
+			self._reset_acpower_inverter_input()
+		else:
+			processAlarm = True
+
 		if generator_acsource and activein_connected:
 #### ExtTransferSwitch warm-up / cool-down
 			self._acInIsGenerator = True
-			if self._acpower_inverter_input['unabletostart']:
+#### ExtTransferSwitch warm-up / cool-down
+			if processAlarm and self._acpower_inverter_input['unabletostart']:
 				self.log_info('Generator detected at inverter AC input, alarm removed')
 			self._reset_acpower_inverter_input()
+#### ExtTransferSwitch warm-up / cool-down
+		elif not processAlarm:
+			self._reset_acpower_inverter_input()
+			return
 		elif self._acpower_inverter_input['timeout'] < self.RETRIES_ON_ERROR:
 			self._acpower_inverter_input['timeout'] += 1
 		elif not self._acpower_inverter_input['unabletostart']:
@@ -1130,6 +1138,7 @@ class StartStop(object):
 	# there may be two AC inputs (Quattro). process both
 
 	def _ignore_ac (self, state):
+			self._activeAcInIsIgnored = state
 			state1 = False
 			state2 = False
 			if self._generatorAcInput == 1:
