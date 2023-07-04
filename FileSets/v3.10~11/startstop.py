@@ -274,6 +274,7 @@ class StartStop(object):
 		self._currentTime = 0
 		self._warmUpEndTime = 0
 		self._coolDownEndTime = 0
+		self._postCoolDownEndTime = 0
 		self._ac1isIgnored = False
 		self._ac2isIgnored = False
 		self._activeAcInIsIgnored = False 
@@ -559,7 +560,9 @@ class StartStop(object):
 		# note that external transfer switch might change the state of on generator
 		# so this needs to be checked and load adjusted every pass
 		# restore load for sources no longer in use or if state is not in warm-up/cool-down
-		if state in (States.WARMUP, States.COOLDOWN):
+		# restoring load is delayed 1following end of cool-down
+		#	to allow the generator to actually stop producing power
+		if state in (States.WARMUP, States.COOLDOWN) or self._currentTime < self._postCoolDownEndTime:
 			self._ignore_ac (True)
 		else:
 			self._ignore_ac (False)
@@ -1155,6 +1158,7 @@ class StartStop(object):
 				self._warmUpEndTime = 0
 
 			self._coolDownEndTime = 0
+			self._postCoolDownEndTime = 0
 
 			self._update_remote_switch()
 			self._starttime = self._currentTime
@@ -1199,6 +1203,8 @@ class StartStop(object):
 			# When we arrive here, a stop command was given and cool-down period has elapesed
 			if state == States.COOLDOWN:
 				self.log_info ("cool-down complete")
+				# delay restoring load to give generator a chance to stop
+				self._postCoolDownEndTime = self._currentTime + 30
 			self._dbusservice['/State'] = States.STOPPED
 			self._update_remote_switch()
 #### end ExtTransferSwitch warm-up / cool-down
