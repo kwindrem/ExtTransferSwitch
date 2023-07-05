@@ -51,9 +51,9 @@ from settingsdevice import SettingsDevice
 
 class Monitor:
 
-	vebusService = ""
-
 	def getVeBusObjects (self):
+		vebusService = ""
+
 		# invalidate all local parameters if transfer switch is not active
 		if not self.transferSwitchActive:
 			self.dbusOk = False

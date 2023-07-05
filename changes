@@ -1,3 +1,6 @@
+v2.17:
+	fixed: not changing from grid to generator (external transfer switch not running)
+
 v2.16:
 	add post-cool-down delay to allow generator to stop before restoring AC input
 
