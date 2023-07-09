@@ -42,7 +42,7 @@ try:
 except ImportError:
 	import gobject as GLib # for Python 2
 
-# add the path to our own packages for import ############################
+# add the path to our own packages for import
 # use an established Victron service to maintain compatiblity
 sys.path.insert(1, os.path.join('/opt/victronenergy/dbus-systemcalc-py', 'ext', 'velib_python'))
 from vedbus import VeDbusService
@@ -61,6 +61,8 @@ class Monitor:
 			self.stopWhenAcAvailableObj = None
 			self.stopWhenAcAvailableFpObj = None
 			self.acInputTypeObj = None
+			self.veBusService = ""
+			self.transferSwitchLocation = 0
 			return
 
 		try:
@@ -108,6 +110,7 @@ class Monitor:
 			transferSwitchLocation = 2
 		else:
 			transferSwitchLocation = 1
+
 		# if changed, trigger refresh of object pointers
 		if transferSwitchLocation != self.transferSwitchLocation:
 			logging.info ("Transfer switch is on AC %s in" % transferSwitchLocation)
@@ -144,59 +147,63 @@ class Monitor:
 
 
 	def updateTransferSwitchState (self):
+		inputInvalid = False
 		try:
-			# current digital input is no longer valid
+			if self.transferSwitchActive:
+				state = self.transferSwitchStateObj.GetValue ()
+				if state == 12:		# 12 is the on generator value
+					self.onGenerator = True
+				elif state == 13:	# 13 is the on grid value
+					self.onGenerator = False
+				# other value indicates the selected digital input is assigned to a different function
+				else:
+					inputInvalid = True
+
+			# digital input not active
 			# search for a new one only every 10 seconds to avoid unnecessary processing
-			if (self.digitalInputTypeObj == None or self.digitalInputTypeObj.GetValue() != self.extTransferDigInputType) and self.tsInputSearchDelay > 10:
+			elif self.tsInputSearchDelay >= 10:
 				newInputService = ""
 				for service in self.theBus.list_names():
-					# found a digital input service, now check the type
+					# found a digital input service, now check the for valid state value
 					if service.startswith ("com.victronenergy.digitalinput"):
-						self.digitalInputTypeObj = self.theBus.get_object (service, '/Type')
+						self.transferSwitchStateObj = self.theBus.get_object (service, '/State')
+						state = self.transferSwitchStateObj.GetValue()
 						# found it!
-						if self.digitalInputTypeObj.GetValue() == self.extTransferDigInputType:
+						if state == 12 or state == 13:
 							newInputService = service
 							break
  
-				# found new service - get objects for use later
+				# found new service - set up to use it's values
 				if newInputService != "":
-					logging.info ("discovered switch digital input service at %s", newInputService)
-					self.transferSwitchStateObj = self.theBus.get_object (newInputService, '/State')
-				else:
-					if self.transferSwitchStateObj != None:
-						logging.info ("Transfer switch digital input service NOT found")
-					self.digitalInputTypeObj = None
-					self.transferSwitchStateObj = None
-					self.tsInputSearchDelay = 0 # start delay timer
-
-			# if serch delay timer is active, increment it now
-			if self.tsInputSearchDelay <= 10:
-				self.tsInputSearchDelay += 1
-
-			if self.transferSwitchStateObj != None:
-				try:
-					if self.dbusOk and self.transferSwitchStateObj.GetValue () == 12: ## 12 is the on generator value
-						self.onGenerator = True
-					else:
-						self.onGenerator = False
+					logging.info ("discovered transfer switch digital input service at %s", newInputService)
 					self.transferSwitchActive = True
-				except:
-					self.onGenerator = False
+				elif self.transferSwitchActive:
+					logging.info ("Transfer switch digital input service NOT found")
 					self.transferSwitchActive = False
-			else:
-				self.onGenerator = False
-				self.transferSwitchActive = False
 
+
+		# any exception indicates the selected digital input is no longer active
 		except:
-			logging.info ("TransferSwitch digital input no longer valid")
-			self.digitalInputTypeObj = None
-			self.transferSwitchStateObj = None
-			return False
+			inputInvalid = True
+
+		if inputInvalid:
+			if self.transferSwitchActive:
+				logging.info ("Transfer switch digital input no longer valid")
+			self.transferSwitchActive = False
+
+		if self.transferSwitchActive:
+			self.tsInputSearchDelay = 0
+		else:
+			self.onGenerator = False
+			# if serch delay timer is active, increment it now
+			if self.tsInputSearchDelay < 10:
+				self.tsInputSearchDelay += 1
+			else:
+				self.tsInputSearchDelay = 0
 
 
 	def transferToGrid (self):
 		if self.dbusOk:
-			logging.info ("#### to grid")
 			# save current values for restore when switching back to generator
 			try:
 				self.DbusSettings['generatorCurrentLimit'] = self.currentLimitObj.GetValue ()
@@ -223,7 +230,6 @@ class Monitor:
 
 	def transferToGenerator (self):
 		if self.dbusOk:
-			logging.info ("#### to generator")
 			# save current values for restore when switching back to grid
 			try:
 				self.DbusSettings['gridCurrentLimit'] = self.currentLimitObj.GetValue ()
@@ -296,10 +302,8 @@ class Monitor:
 		self.stopWhenAcAvailableObj = None
 		self.stopWhenAcAvailableFpObj = None
 
-		self.digitalInputTypeObj = None
 		self.transferSwitchStateObj = None
-		self.digInputMaxTypeObj = None
-		self.extTransferDigInputType = None
+		self.extTransferDigInputName = "External AC Input transfer switch"	# must match name set in dbus_digitalInputs.py !!!!!
 
 		self.lastOnGenerator = None
 		self.transferSwitchActive = False
@@ -318,15 +322,6 @@ class Monitor:
 						}
 		self.DbusSettings = SettingsDevice(bus=self.theBus, supportedSettings=settingsList,
 								timeout = 10, eventCallback=None )
-
-		# get the maximum digital input type - this will be the type for Exeternal Transfer Switch
-		try:
-			digInputMaxTypeObj = self.theBus.get_object (dbusSettingsPath, "/Settings/DigitalInput/1/Type")
-			if digInputMaxTypeObj != None:
-				self.extTransferDigInputType = digInputMaxTypeObj.GetMax ()
-		except:
-			pass
-		logging.info ("Ext Transfer Switch digital input type value: " + str (self.extTransferDigInputType))
 
 		GLib.timeout_add (1000, self.background)
 		return None

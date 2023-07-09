@@ -1,3 +1,6 @@
+v2.18:
+	fixed: not changing grid/generator after downgrading Venus OS
+
 v2.17:
 	fixed: not changing from grid to generator (external transfer switch not running)
 
