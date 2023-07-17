@@ -71,6 +71,7 @@ class Monitor:
 		except:
 			if self.dbusOk:
 				logging.info ("Multi/Quattro disappeared - /VebusService invalid")
+			self.veBusService = ""
 			self.dbusOk = False
 			self.numberOfAcInputs = 0
 			self.acInputTypeObj = None
@@ -88,10 +89,12 @@ class Monitor:
 			except:
 				self.numberOfAcInputs = 0
 
-			if self.numberOfAcInputs  == 2:
+			if self.numberOfAcInputs == 0:
+				self.dbusOk = False
+			elif self.numberOfAcInputs == 2:
 				logging.info ("discovered Quattro at " + vebusService)
-			else:
-				logging.info ("discovered Multi at " + vebusService)
+			elif self.numberOfAcInputs == 1:
+				logging.info ("discovered Multi at " + vebusService)			
 
 			try:
 				self.currentLimitObj = self.theBus.get_object (vebusService, "/Ac/ActiveIn/CurrentLimit")
@@ -113,7 +116,8 @@ class Monitor:
 
 		# if changed, trigger refresh of object pointers
 		if transferSwitchLocation != self.transferSwitchLocation:
-			logging.info ("Transfer switch is on AC %s in" % transferSwitchLocation)
+			if transferSwitchLocation != 0:
+				logging.info ("Transfer switch is on AC %d in" % transferSwitchLocation)
 			self.transferSwitchLocation = transferSwitchLocation
 			self.stopWhenAcAvailableObj = None
 			self.stopWhenAcAvailableFpObj = None
@@ -137,13 +141,21 @@ class Monitor:
 					self.stopWhenAcAvailableObj = self.theBus.get_object (dbusSettingsPath, "/Settings/Generator0/StopWhenAc1Available")
 			except:
 				self.stopWhenAcAvailableObj = None
+			# first try new settings
 			try:
 				if self.transferSwitchLocation == 2:
-					self.stopWhenAcAvailableFpObj = self.theBus.get_object (dbusSettingsPath, "/Settings/FischerPanda0/StopWhenAc2Available")
+					self.stopWhenAcAvailableFpObj = self.theBus.get_object (dbusSettingsPath, "/Settings/Generator1/StopWhenAc2Available")
 				else:
-					self.stopWhenAcAvailableFpObj = self.theBus.get_object (dbusSettingsPath, "/Settings/FischerPanda0/StopWhenAc1Available")
+					self.stopWhenAcAvailableFpObj = self.theBus.get_object (dbusSettingsPath, "/Settings/Generator1/StopWhenAc1Available")
+			# next try old settings
 			except:
-				self.stopWhenAcAvailableFpObj = None
+				try:
+					if self.transferSwitchLocation == 2:
+						self.stopWhenAcAvailableFpObj = self.theBus.get_object (dbusSettingsPath, "/Settings/FischerPanda0/StopWhenAc2Available")
+					else:
+						self.stopWhenAcAvailableFpObj = self.theBus.get_object (dbusSettingsPath, "/Settings/FischerPanda0/StopWhenAc1Available")
+				except:
+					self.stopWhenAcAvailableFpObj = None
 
 
 	def updateTransferSwitchState (self):
@@ -204,21 +216,24 @@ class Monitor:
 
 	def transferToGrid (self):
 		if self.dbusOk:
+			logging.info ("switching to grid settings")
 			# save current values for restore when switching back to generator
 			try:
 				self.DbusSettings['generatorCurrentLimit'] = self.currentLimitObj.GetValue ()
 			except:
-				logging.error ("dbus error AC input settings not saved switching to grid")
-
+				logging.error ("dbus error generator AC input current limit not saved switching to grid")
 
 			try:
 				self.acInputTypeObj.SetValue (self.DbusSettings['gridInputType'])
+			except:
+				logging.error ("dbus error AC input type not changed to grid")
+			try:
 				if self.currentLimitIsAdjustableObj.GetValue () == 1:
 					self.currentLimitObj.SetValue (wrap_dbus_value (self.DbusSettings['gridCurrentLimit']))
 				else:
 					logging.warning ("Input current limit not adjustable - not changed")
 			except:
-				logging.error ("dbus error AC input settings not changed to grid")
+				logging.error ("dbus error AC input current limit not changed switching to grid")
 
 			try:
 				if self.stopWhenAcAvailableObj != None:
@@ -226,14 +241,21 @@ class Monitor:
 				if self.stopWhenAcAvailableFpObj != None:
 					self.stopWhenAcAvailableFpObj.SetValue (self.DbusSettings['stopWhenAcAvaiableFp'])
 			except:
-				logging.error ("stopWhenAcAvailable update failed when switching to grid")
+				logging.error ("stopWhenAcAvailable update not changed when switching to grid")
 
 	def transferToGenerator (self):
 		if self.dbusOk:
+			logging.info ("switching to generator settings")
 			# save current values for restore when switching back to grid
 			try:
-				self.DbusSettings['gridCurrentLimit'] = self.currentLimitObj.GetValue ()
 				self.DbusSettings['gridInputType'] = self.acInputTypeObj.GetValue ()
+			except:
+				logging.error ("dbus error AC input type not saved when switching to generator")
+			try:
+				self.DbusSettings['gridCurrentLimit'] = self.currentLimitObj.GetValue ()
+			except:
+				logging.error ("dbus error AC input current limit not saved when switching to generator")
+			try:
 				if self.stopWhenAcAvailableObj != None:
 					self.DbusSettings['stopWhenAcAvaiable'] = self.stopWhenAcAvailableObj.GetValue ()
 				else:
@@ -243,16 +265,19 @@ class Monitor:
 				else:
 					self.DbusSettings['stopWhenAcAvaiableFp'] = 0
 			except:
-				logging.error ("dbus error AC input and stop when AC available settings not saved when switching to generator")
+				logging.error ("dbus error stop when AC available settings not saved when switching to generator")
 
 			try:
 				self.acInputTypeObj.SetValue (2)
+			except:
+				logging.error ("dbus error AC input type not changed when switching to generator")
+			try:
 				if self.currentLimitIsAdjustableObj.GetValue () == 1:
 					self.currentLimitObj.SetValue (wrap_dbus_value (self.DbusSettings['generatorCurrentLimit']))
 				else:
 					logging.warning ("Input current limit not adjustable - not changed")
 			except:
-				logging.error ("dbus error AC input settings not changed when switching to generator")
+				logging.error ("dbus error AC input current limit not changed when switching to generator")
 
 			try:
 				if self.stopWhenAcAvailableObj != None:
@@ -260,7 +285,7 @@ class Monitor:
 				if self.stopWhenAcAvailableFpObj != None:
 					self.stopWhenAcAvailableFpObj.SetValue (0)
 			except:
-				logging.error ("stopWhenAcAvailable update failed switching to generator")
+				logging.error ("stopWhenAcAvailable update not changed switching to generator")
 
 
 	def background (self):
@@ -292,7 +317,6 @@ class Monitor:
 
 		self.theBus = dbus.SystemBus()
 		self.onGenerator = False
-		self.veBusServiceObj = None
 		self.veBusService = ""
 		self.lastVeBusService = ""
 		self.acInputTypeObj = None
