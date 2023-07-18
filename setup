@@ -42,7 +42,11 @@ if [ $scriptAction == 'INSTALL' ] ; then
 	# is GuiMods versions, do not replace
 	file="/opt/victronenergy/dbus-generator-starter/startstop.py"
 	if [ -f "$file" ] && (( $(grep -c "#### GuiMods" "$file") == 0 )); then
-		    updateActiveFile $file
+		updateActiveFile $file
+		if $thisFileUpdated; then
+			restartGeneratorService=true
+		fi
+		updateActiveFile "/opt/victronenergy/dbus-generator-starter/dbus_generator.py"
 		if $thisFileUpdated; then
 			restartGeneratorService=true
 		fi
@@ -68,7 +72,11 @@ if [ $scriptAction == 'UNINSTALL' ] ; then
 	# is GuiMods versions, do not uninstall
 	file="/opt/victronenergy/dbus-generator-starter/startstop.py"
 	if [ -f "$file" ] && (( $(grep -c "#### GuiMods" "$file") == 0 )); then
-		    	restoreActiveFile $file
+		restoreActiveFile $file
+		if $thisFileUpdated; then
+			restartGeneratorService=true
+		fi
+		restoreActiveFile "/opt/victronenergy/dbus-generator-starter/dbus_generator.py"
 		if $thisFileUpdated; then
 			restartGeneratorService=true
 		fi

@@ -3,3 +3,4 @@
 /opt/victronenergy/dbus-digitalinputs/dbus_digitalinputs.py
 /opt/victronenergy/dbus-modbustcp/attributes.csv
 /opt/victronenergy/dbus-generator-starter/startstop.py
+/opt/victronenergy/dbus-generator-starter/dbus_generator.py
