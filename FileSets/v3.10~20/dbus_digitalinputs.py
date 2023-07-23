@@ -447,7 +447,6 @@ class Generator(PinAlarm):
 
                 self.bus.call_async(n, '/Ac/Control/RemoteGeneratorSelected', None,
                     'SetValue', 'v', [v], None, None)
-                print ("#### RemoteGeneratorSelected %d" % v)
         except dbus.exceptions.DBusException:
             print ("DBus exception setting RemoteGeneratorSelected")
             traceback.print_exc()
