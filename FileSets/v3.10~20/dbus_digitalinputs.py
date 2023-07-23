@@ -409,20 +409,52 @@ class Generator(PinAlarm):
         # Periodically rewrite the generator selection. The Multi may reset
         # causing this to be lost, or a race condition on startup may cause
         # it to not be set properly.
-        self._timer = GLib.timeout_add(30000,
-            lambda: self.select_generator(self.level ^ self.settings['invert'] ^ 1))
+        self._timer = GLib.timeout_add(30000, lambda: self.select_generator(self.level ^ self.settings['invert'] ^ 1))
+
+#### added for ExtTransferSwitch package
+        self.ac1InputTypeItem = None
+        self.ac2InputTypeItem = None
+#### end added for ExtTransferSwitch package
+
 
     def select_generator(self, v):
+
         # Find all vebus services, and let them know
         try:
             services = [n for n in self.bus.list_names() if n.startswith(
                 'com.victronenergy.vebus.')]
             for n in services:
+#### added for ExtTransferSwitch package
+                # determine if selected input is the generator
+                inputIsGenerator = False
+                activeSource = VeDbusItemImport(self.bus, n, "/Ac/ActiveIn/ActiveInput").get_value ()
+                if activeSource == 0:
+                    if self.ac1InputTypeItem == None:
+                        self.ac1InputTypeItem = VeDbusItemImport(self.bus,
+                            "com.victronenergy.settings", "/Settings/SystemSetup/AcInput1")
+                    if self.ac1InputTypeItem != None and self.ac1InputTypeItem.get_value () == 2:
+                        inputIsGenerator = True
+                elif activeSource == 1:
+                    if self.ac2InputTypeItem == None:
+                        self.ac2InputTypeItem = VeDbusItemImport(self.bus,
+                            "com.victronenergy.settings", "/Settings/SystemSetup/AcInput2")
+                    if self.ac2InputTypeItem != None and self.ac2InputTypeItem.get_value () == 2:
+                        inputIsGenerator = True
+                # active input is not the generator - release control
+                if not inputIsGenerator:
+                    v = 0
+#### end added for ExtTransferSwitch package
+
                 self.bus.call_async(n, '/Ac/Control/RemoteGeneratorSelected', None,
                     'SetValue', 'v', [v], None, None)
+                print ("#### RemoteGeneratorSelected %d" % v)
         except dbus.exceptions.DBusException:
             print ("DBus exception setting RemoteGeneratorSelected")
             traceback.print_exc()
+
+#### added for ExtTransferSwitch package
+		# must return True so the GLib timer doesn't exit after first call
+        return True
 
     def toggle(self, level):
         super(Generator, self).toggle(level)
