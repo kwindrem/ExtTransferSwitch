@@ -409,6 +409,7 @@ class Generator(PinAlarm):
         # Periodically rewrite the generator selection. The Multi may reset
         # causing this to be lost, or a race condition on startup may cause
         # it to not be set properly.
+        self._timer = GLib.timeout_add(30000,
             lambda: self.select_generator(self.level ^ self.settings['invert'] ^ 1) or True)
 
 #### added for ExtTransferSwitch package
