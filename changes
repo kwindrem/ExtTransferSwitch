@@ -1,3 +1,6 @@
+v2.25:
+	fixed: generator today run time, showing invalid value
+
 v2.24:
 	fixed: v2.23 crashes dbus_digitalinputs.py
 

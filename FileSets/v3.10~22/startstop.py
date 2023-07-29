@@ -258,6 +258,7 @@ class Battery(object):
 class StartStop(object):
 	_driver = None
 	def __init__(self, instance):
+		logging.info ("ExtTransferSwitch version of startstop.py")
 		self._dbusservice = None
 		self._settings = None
 		self._dbusmonitor = None
@@ -525,12 +526,6 @@ class StartStop(object):
 	def tick(self):
 		if not self._enabled:
 			return
-		self._check_remote_status()
-		self._evaluate_startstop_conditions()
-		self._evaluate_autostart_disabled_alarm()
-		self._detect_generator_at_acinput()
-		if self._dbusservice['/ServiceCounterReset'] == 1:
-			self._dbusservice['/ServiceCounterReset'] = 0
 
 #### ExtTransferSwitch warm-up / cool-down
 		# determine which AC input is connected to the generator
@@ -551,7 +546,10 @@ class StartStop(object):
 
 		self._check_remote_status()
 		self._evaluate_startstop_conditions()
+		self._evaluate_autostart_disabled_alarm()
 		self._detect_generator_at_acinput()
+		if self._dbusservice['/ServiceCounterReset'] == 1:
+			self._dbusservice['/ServiceCounterReset'] = 0
 
 #### ExtTransferSwitch warm-up / cool-down
 		state = self._dbusservice['/State']
@@ -1161,6 +1159,7 @@ class StartStop(object):
 			self._postCoolDownEndTime = 0
 
 			self._update_remote_switch()
+			self._starttime = self._currentTime
 		else: # WARMUP, COOLDOWN, RUNNING, STOPPING
 			if state in (States.COOLDOWN, States.STOPPING):
 				# Start request during cool-down run, go back to RUNNING
