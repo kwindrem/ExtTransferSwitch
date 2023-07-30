@@ -1197,11 +1197,16 @@ class StartStop(object):
 				return
 
 			# When we arrive here, a stop command was given and cool-down period has elapesed
+			# Stop the engine, but if we're coming from cooldown, delay another
+			# while in the STOPPING state before reactivating AC-in.
 			if state == States.COOLDOWN:
 				self.log_info ("starting post cool-down")
 				# delay restoring load to give generator a chance to stop
 				self._postCoolDownEndTime = self._currentTime + WAIT_FOR_ENGINE_STOP
 				self._dbusservice['/State'] = States.STOPPING
+				self._update_remote_switch() # Stop engine
+				self.log_info('Stopping generator that was running by %s condition' %
+							str(self._dbusservice['/RunningByCondition']))
 				return
 				
 			# Wait for engine stop
@@ -1210,14 +1215,15 @@ class StartStop(object):
 					return
 				else:
 					self.log_info ("post cool-down delay complete")
-#### end ExtTransferSwitch warm-up / cool-down
 
 			# All other possibilities are handled now. Cooldown is over or not
 			# configured and we waited for the generator to shut down.
+			if state != States.STOPPING:
+				self._update_remote_switch()
+				self.log_info('Stopping generator that was running by %s condition' %
+							str(self._dbusservice['/RunningByCondition']))
+#### end ExtTransferSwitch warm-up / cool-down
 			self._dbusservice['/State'] = States.STOPPED
-			self._update_remote_switch()
-			self.log_info('Stopping generator that was running by %s condition' %
-						str(self._dbusservice['/RunningByCondition']))
 			self._dbusservice['/RunningByCondition'] = ''
 			self._dbusservice['/RunningByConditionCode'] = RunningConditions.Stopped
 			self._update_accumulated_time()

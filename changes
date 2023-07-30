@@ -1,3 +1,6 @@
+v2.26:
+	fixed: generator running through post cool-down period
+
 v2.25:
 	fixed: generator today run time, showing invalid value
 
