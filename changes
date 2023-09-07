@@ -1,3 +1,10 @@
+v2.30:
+	add support for v3.10~36
+
+v2.29:
+	added support for all released Venus OS versions from v2.71 on
+	add support for v3.10~33
+
 v2.28:
 	add support for v3.10~32
 
