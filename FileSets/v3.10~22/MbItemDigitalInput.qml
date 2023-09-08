@@ -1,1 +1,1 @@
-../v3.10~36/MbItemDigitalInput.qml
+../v3.10~37/MbItemDigitalInput.qml

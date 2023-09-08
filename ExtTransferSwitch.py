@@ -56,6 +56,15 @@ class Monitor:
 
 		# invalidate all local parameters if transfer switch is not active
 		if not self.transferSwitchActive:
+			# release generator override if it's still active
+			try:
+				if self.remoteGeneratorSelectedItem != None:
+					self.remoteGeneratorSelectedItem.SetValue (wrap_dbus_value (0))
+			except:
+				logging.error ("could not release /Ac/Control/RemoteGeneratorSelected")
+				pass
+			self.remoteGeneratorSelectedItem = None
+			self.remoteGeneratorSelectedLocalValue = -1
 			self.dbusOk = False
 			self.numberOfAcInputs = 0
 			self.stopWhenAcAvailableObj = None
@@ -88,6 +97,12 @@ class Monitor:
 				self.numberOfAcInputs = self.theBus.get_object (vebusService, "/Ac/NumberOfAcInputs").GetValue ()
 			except:
 				self.numberOfAcInputs = 0
+			try:
+				self.remoteGeneratorSelectedItem = self.theBus.get_object (vebusService,
+					"/Ac/Control/RemoteGeneratorSelected")
+			except:
+				self.remoteGeneratorSelectedItem = None
+				self.remoteGeneratorSelectedLocalValue = -1
 
 			if self.numberOfAcInputs == 0:
 				self.dbusOk = False
@@ -291,7 +306,6 @@ class Monitor:
 	def background (self):
 
 		##startTime = time.time()
- 
 		self.updateTransferSwitchState ()
 		self.getVeBusObjects ()
 
@@ -307,6 +321,23 @@ class Monitor:
 			self.lastOnGenerator = self.onGenerator
 		elif self.onGenerator:
 			self.transferToGrid ()
+
+		# update main VE.Bus RemoteGeneratorSelected which is used to enable grid charging
+		#	if renewable energy is turned on
+		if not self.dbusOk or not self.onGenerator:
+			newRemoteGeneratorSelectedLocalValue = 0
+		else:
+			newRemoteGeneratorSelectedLocalValue = 1
+		if self.remoteGeneratorSelectedItem == None:
+			self.remoteGeneratorSelectedLocalValue = -1
+		elif newRemoteGeneratorSelectedLocalValue != self.remoteGeneratorSelectedLocalValue:
+			try:
+				self.remoteGeneratorSelectedItem.SetValue (wrap_dbus_value (newRemoteGeneratorSelectedLocalValue))
+			except:
+				logging.error ("could not set /Ac/Control/RemoteGeneratorSelected")
+				pass
+
+			self.remoteGeneratorSelectedLocalValue = newRemoteGeneratorSelectedLocalValue
 
 		##stopTime = time.time()
 		##print ("#### background time %0.3f" % (stopTime - startTime))
@@ -325,6 +356,8 @@ class Monitor:
 		self.currentLimitIsAdjustableObj = None
 		self.stopWhenAcAvailableObj = None
 		self.stopWhenAcAvailableFpObj = None
+		self.remoteGeneratorSelectedItem = None
+		self.remoteGeneratorSelectedLocalValue = -1
 
 		self.transferSwitchStateObj = None
 		self.extTransferDigInputName = "External AC Input transfer switch"	# must match name set in dbus_digitalInputs.py !!!!!

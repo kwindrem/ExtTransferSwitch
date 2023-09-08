@@ -18,7 +18,7 @@ from gi.repository import GLib
 from vedbus import VeDbusService, VeDbusItemImport
 from settingsdevice import SettingsDevice
 
-VERSION = '0.22'
+VERSION = '0.23'
 MAXCOUNT = 2**31-1
 SAVEINTERVAL = 60000
 
@@ -410,7 +410,7 @@ class Generator(PinAlarm):
         # causing this to be lost, or a race condition on startup may cause
         # it to not be set properly.
         self._timer = GLib.timeout_add(30000,
-			lambda: self.select_generator(self.level ^ self.settings['invert'] ^ 1) or True)
+            lambda: self.select_generator(self.level ^ self.settings['invert'] ^ 1) or True)
 
 #### added for ExtTransferSwitch package
         self.mainVeBusServiceItem = None
@@ -425,8 +425,8 @@ class Generator(PinAlarm):
                 'com.victronenergy.vebus.')]
             for n in services:
 #### added for ExtTransferSwitch package
-				# skip this service if it is the main VE.Bus device
-				# processing for that is handled in ExtTransferSwitch
+                # skip this service if it is the main VE.Bus device
+                # processing for that is handled in ExtTransferSwitch
                 try:
                     if self.mainVeBusServiceItem == None:
                         self.mainVeBusServiceItem = VeDbusItemImport(self.bus,
@@ -442,10 +442,6 @@ class Generator(PinAlarm):
         except dbus.exceptions.DBusException:
             print ("DBus exception setting RemoteGeneratorSelected")
             traceback.print_exc()
-
-#### added for ExtTransferSwitch package
-		# must return True so the GLib timer doesn't exit after first call
-        return True
 
     def toggle(self, level):
         super(Generator, self).toggle(level)
