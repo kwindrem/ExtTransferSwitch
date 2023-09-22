@@ -1,3 +1,6 @@
+v2.32:
+	add support for v3.20~5
+
 v2.31:
 	moved RemoteGeneratorSelected updates for main VE.Bus device
 		from dbus_digitalinputs to ExtTransferSwitch.py

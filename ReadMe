@@ -1,6 +1,12 @@
 This software interfaces an external transfer switch ahead of a MultiPlus AC input
 	changing the AC input current limit and and AC source type based on on grid/on generator
 
+ExtTransferSwitch includes support for "renewable energy" prioritizaiton added in Venus OS 3.10.
+	This also requires Multi firmware 506.
+	Renewable energy priority shuts down the Multi/Quattro charger allowing solar, wind and other charging sources
+		to charge the battery. Grid power is reneabled at a low SOC (battery voltage) set in the Multi configuration.
+	In addition, switching the AC source to generator reenables Multi AC input charging.
+
 ExtTransferSwitch includes support for generator warm-up and cool-down added in Venus OS v3.00~37
 The same functionality is included in GuiMods, however there are additional enhancements
 to the generator interface in GuiMods. Installing GuiMods is recommended.
