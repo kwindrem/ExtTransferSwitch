@@ -1,5 +1,7 @@
 #!/usr/bin/python3 -u
 
+#### modified for ExtTransferSwitch package
+
 import sys, os
 import signal
 from threading import Thread
@@ -16,7 +18,7 @@ from gi.repository import GLib
 from vedbus import VeDbusService, VeDbusItemImport
 from settingsdevice import SettingsDevice
 
-VERSION = '0.21'
+VERSION = '0.23'
 MAXCOUNT = 2**31-1
 SAVEINTERVAL = 60000
 
@@ -39,6 +41,8 @@ INPUTTYPES = [
     'Generator',
     'Generic I/O',
     'Touch enable',
+#### added for ExtTransferSwitch package -- must be LAST in the list
+    'Transfer switch'
 ]
 
 # Translations. The text will be used only for GetText, it will be translated
@@ -49,7 +53,9 @@ TRANSLATIONS = [
     Translation('no', 'yes'),
     Translation('open', 'closed'),
     Translation('ok', 'alarm'),
-    Translation('running', 'stopped')
+    Translation('running', 'stopped'),
+#### added for ExtTransferSwitch package
+    Translation('on generator', 'on grid')
 ]
 
 class SystemBus(dbus.bus.BusConnection):
@@ -398,23 +404,60 @@ class Generator(PinAlarm):
     type_id = 9
     translation = 5 # running, stopped
 
-    def toggle(self, level):
-        super(Generator, self).toggle(level)
+    def __init__(self, *args, **kwargs):
+        super(Generator, self).__init__(*args, **kwargs)
+        # Periodically rewrite the generator selection. The Multi may reset
+        # causing this to be lost, or a race condition on startup may cause
+        # it to not be set properly.
+        self._timer = GLib.timeout_add(30000,
+            lambda: self.select_generator(self.level ^ self.settings['invert'] ^ 1) or True)
 
-        # Follow the same inversion sense as for display
-        v = level ^ self.settings['invert'] ^ 1
+#### added for ExtTransferSwitch package
+        self.mainVeBusServiceItem = None
+#### end added for ExtTransferSwitch package
+
+
+    def select_generator(self, v):
 
         # Find all vebus services, and let them know
         try:
             services = [n for n in self.bus.list_names() if n.startswith(
                 'com.victronenergy.vebus.')]
             for n in services:
+#### added for ExtTransferSwitch package
+                # skip this service if it is the main VE.Bus device
+                # processing for that is handled in ExtTransferSwitch
+                try:
+                    if self.mainVeBusServiceItem == None:
+                        self.mainVeBusServiceItem = VeDbusItemImport(self.bus,
+                            "com.victronenergy.service", "/VebusService")
+                    if n == self.mainVeBusService.get_value ():
+                        continue
+                except:
+                    pass
+#### end added for ExtTransferSwitch package
+
                 self.bus.call_async(n, '/Ac/Control/RemoteGeneratorSelected', None,
                     'SetValue', 'v', [v], None, None)
         except dbus.exceptions.DBusException:
             print ("DBus exception setting RemoteGeneratorSelected")
             traceback.print_exc()
 
+    def toggle(self, level):
+        super(Generator, self).toggle(level)
+
+        # Follow the same inversion sense as for display
+        self.select_generator(level ^ self.settings['invert'] ^ 1)
+
+    def deactivate(self):
+        super(Generator, self).deactivate()
+        # When deactivating, reset the generator selection state
+        self.select_generator(0)
+
+        # And kill the periodic job
+        if self._timer is not None:
+            GLib.source_remove(self._timer)
+            self._timer = None
 
 # Various types of things we might want to monitor
 class DoorSensor(PinAlarm):
@@ -456,6 +499,12 @@ class GenericIO(PinAlarm):
     _product_name = "Generic I/O"
     type_id = 10
     translation = 0 # low, high
+
+#### added for ExtTransferSwitch package
+class TransferSwitch(PinAlarm):
+    _product_name = "External AC Input transfer switch"
+    type_id = 12
+    translation = 6 # Grid In / Generator In
 
 
 def dbusconnection():

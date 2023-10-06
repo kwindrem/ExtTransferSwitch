@@ -1,6 +1,12 @@
 #!/usr/bin/python -u
 # -*- coding: utf-8 -*-
 
+#### ExtTransferSwitch
+#### warm-up and cool-down periods have been modified in order to work well with an external transfer switch
+####	selecting grid or generator ahead of a MultiPlus input.
+#### Search for #### ExtTransferSwitch to find changes
+
+
 # Function
 # dbus_generator monitors the dbus for batteries (com.victronenergy.battery.*) and
 # vebus com.victronenergy.vebus.*
@@ -89,7 +95,7 @@ class SocCondition(Condition):
 	name = 'soc'
 	monitoring = 'battery'
 	boolean = False
-	timed = False
+	timed = True
 
 	def get_value(self):
 		return self.parent._get_battery().soc
@@ -252,6 +258,7 @@ class Battery(object):
 class StartStop(object):
 	_driver = None
 	def __init__(self, instance):
+		logging.info ("ExtTransferSwitch version of startstop.py")
 		self._dbusservice = None
 		self._settings = None
 		self._dbusmonitor = None
@@ -265,8 +272,18 @@ class StartStop(object):
 		self._testrun_soc_retries = 0
 		self._last_counters_check = 0
 
+#### ExtTransferSwitch warm-up / cool-down
+		self._currentTime = 0
+		self._warmUpEndTime = 0
+		self._coolDownEndTime = 0
+		self._postCoolDownEndTime = 0
+		self._ac1isIgnored = False
+		self._ac2isIgnored = False
+		self._activeAcInIsIgnored = False 
+		self._acInIsGenerator = False
+		self._generatorAcInput = 0
+
 		self._starttime = 0
-		self._stoptime = 0 # Used for cooldown
 		self._manualstarttimer = 0
 		self._last_runtime_update = 0
 		self._timer_runnning = 0
@@ -509,12 +526,52 @@ class StartStop(object):
 	def tick(self):
 		if not self._enabled:
 			return
+
+#### ExtTransferSwitch warm-up / cool-down
+		# determine which AC input is connected to the generator
+		try:
+			if self._dbusmonitor.get_value ('com.victronenergy.settings', '/Settings/SystemSetup/AcInput1') == 2:
+				self._generatorAcInput = 1
+			elif self._dbusmonitor.get_value (SYSTEM_SERVICE, '/Ac/In/NumberOfAcInputs') >= 2 \
+					and self._dbusmonitor.get_value ('com.victronenergy.settings', '/Settings/SystemSetup/AcInput2') == 2:
+				self._generatorAcInput = 2
+			# no generator input found
+			else:
+				self._generatorAcInput = 0
+		except:
+			self._generatorAcInput = 0
+
+#### ExtTransferSwitch warm-up / cool-down
+		self._currentTime = self._get_monotonic_seconds ()
+
 		self._check_remote_status()
 		self._evaluate_startstop_conditions()
 		self._evaluate_autostart_disabled_alarm()
 		self._detect_generator_at_acinput()
 		if self._dbusservice['/ServiceCounterReset'] == 1:
 			self._dbusservice['/ServiceCounterReset'] = 0
+
+#### ExtTransferSwitch warm-up / cool-down
+		state = self._dbusservice['/State']
+
+		# shed load for active generator input in warm-up and cool-down
+		# note that external transfer switch might change the state of on generator
+		# so this needs to be checked and load adjusted every pass
+		# restore load for sources no longer in use or if state is not in warm-up/cool-down
+		# restoring load is delayed 1following end of cool-down
+		#	to allow the generator to actually stop producing power
+		if state in (States.WARMUP, States.COOLDOWN, States.STOPPING):
+			self._ignore_ac (True)
+		else:
+			self._ignore_ac (False)
+
+		# update cool down end time while running and generator has the load
+		# this is done because acInIsGenerator may change by an external transfer switch
+		#	and the input type changed by the ExtTransferSwitch service
+		if state == States.RUNNING and self._acInIsGenerator:
+			self._coolDownEndTime = self._currentTime + self._settings['cooldowntime']
+#### end ExtTransferSwitch warm-up / cool-down
+
 
 	def _evaluate_startstop_conditions(self):
 		if self.get_error() != Errors.NONE:
@@ -528,6 +585,7 @@ class StartStop(object):
 		elif self._errorstate == 1:
 			# Error cleared
 			self._errorstate = 0
+			self._dbusservice['/State'] = States.STOPPED
 			self.log_info('Error state cleared, taking control of remote switch.')
 
 		start = False
@@ -624,7 +682,9 @@ class StartStop(object):
 
 	def _evaluate_autostart_disabled_alarm(self):
 
-		if self._settings['autostart'] == 1 or self._settings['autostartdisabledalarm'] == 0:
+		if self._settings['autostart'] == 0 or \
+				self.get_error() != Errors.REMOTEDISABLED or \
+				self._settings['autostartdisabledalarm'] == 0:
 			self._autostart_last_time = self._get_monotonic_seconds()
 			if self._dbusservice['/Alarms/AutoStartDisabled'] != 0:
 				self._dbusservice['/Alarms/AutoStartDisabled'] = 0
@@ -636,14 +696,13 @@ class StartStop(object):
 			self._dbusservice['/Alarms/AutoStartDisabled'] = 2
 
 
+#### ExtTransferSwitch warm-up / cool-down - rewrote so acInIsGenerator is updated even if alarm is disabled
 	def _detect_generator_at_acinput(self):
+#### ExtTransferSwitch warm-up / cool-down
+		self._acInIsGenerator = False	# covers all conditions that result in a return
+
 		state = self._dbusservice['/State']
-
-		if state == States.STOPPED:
-			self._reset_acpower_inverter_input()
-			return
-
-		if self._settings['nogeneratoratacinalarm'] == 0:
+		if state in [States.STOPPED, States.COOLDOWN, States.WARMUP]:
 			self._reset_acpower_inverter_input()
 			return
 
@@ -661,10 +720,24 @@ class StartStop(object):
 		# Not connected = 0, connected = 1
 		activein_connected = activein_state == 1
 
+#### ExtTransferSwitch warm-up / cool-down
+		if self._settings['nogeneratoratacinalarm'] == 0:
+			processAlarm = False
+			self._reset_acpower_inverter_input()
+		else:
+			processAlarm = True
+
 		if generator_acsource and activein_connected:
-			if self._acpower_inverter_input['unabletostart']:
+#### ExtTransferSwitch warm-up / cool-down
+			self._acInIsGenerator = True
+#### ExtTransferSwitch warm-up / cool-down
+			if processAlarm and self._acpower_inverter_input['unabletostart']:
 				self.log_info('Generator detected at inverter AC input, alarm removed')
 			self._reset_acpower_inverter_input()
+#### ExtTransferSwitch warm-up / cool-down
+		elif not processAlarm:
+			self._reset_acpower_inverter_input()
+			return
 		elif self._acpower_inverter_input['timeout'] < self.RETRIES_ON_ERROR:
 			self._acpower_inverter_input['timeout'] += 1
 		elif not self._acpower_inverter_input['unabletostart']:
@@ -1071,35 +1144,41 @@ class StartStop(object):
 		# already running. When differs, the RunningByCondition is updated
 		running = state in (States.WARMUP, States.COOLDOWN, States.STOPPING, States.RUNNING)
 		if not (running and remote_running): # STOPPED, ERROR
-			if self._settings['warmuptime'] > 0:
-				# Remove load while warming up
-				if self._ac1_is_generator:
-					self._set_ignore_ac1(True)
-				if self._ac2_is_generator:
-					self._set_ignore_ac2(True)
+#### ExtTransferSwitch warm-up / cool-down
+			self.log_info('Starting generator by %s condition' % condition)
+			# if there is a warmup time specified, always go through warm-up state
+			#	regardless of AC input in use
+			warmUpPeriod = self._settings['warmuptime']
+			if warmUpPeriod > 0:
+				self._warmUpEndTime = self._currentTime + warmUpPeriod
+				self.log_info ("starting warm-up")
 				self._dbusservice['/State'] = States.WARMUP
+			# no warm-up go directly to running
 			else:
 				self._dbusservice['/State'] = States.RUNNING
+				self._warmUpEndTime = 0
+
+			self._coolDownEndTime = 0
+			self._postCoolDownEndTime = 0
 
 			self._update_remote_switch()
-			self._starttime = monotonic_time.monotonic_time().to_seconds_double()
-			self.log_info('Starting generator by %s condition' % condition)
+			self._starttime = self._currentTime
 		else: # WARMUP, COOLDOWN, RUNNING, STOPPING
-			if state == States.WARMUP:
-				if monotonic_time.monotonic_time().to_seconds_double() - self._starttime > self._settings['warmuptime']:
-					self._set_ignore_ac1(False) # Release load onto Generator
-					self._set_ignore_ac2(False)
-					self._dbusservice['/State'] = States.RUNNING
-			elif state in (States.COOLDOWN, States.STOPPING):
+			if state in (States.COOLDOWN, States.STOPPING):
 				# Start request during cool-down run, go back to RUNNING
-				self._set_ignore_ac1(False) # Put load back onto Generator
-				self._set_ignore_ac2(False)
+				self.log_info ("aborting cool-down - returning to running")
 				self._dbusservice['/State'] = States.RUNNING
+
+			elif state == States.WARMUP:
+				if self._currentTime > self._warmUpEndTime:
+					self.log_info ("warm-up complete")
+					self._dbusservice['/State'] = States.RUNNING
 
 			# Update the RunningByCondition
 			if self._dbusservice['/RunningByCondition'] != condition:
 				self.log_info('Generator previously running by %s condition is now running by %s condition'
 							% (self._dbusservice['/RunningByCondition'], condition))
+#### end ExtTransferSwitch warm-up / cool-down
 
 		self._dbusservice['/RunningByCondition'] = condition
 		self._dbusservice['/RunningByConditionCode'] = RunningConditions.lookup(condition)
@@ -1110,44 +1189,48 @@ class StartStop(object):
 		running = state in (States.WARMUP, States.COOLDOWN, States.STOPPING, States.RUNNING)
 
 		if running or remote_running:
-			if self._settings['cooldowntime'] > 0:
-				if state == States.RUNNING:
+#### ExtTransferSwitch warm-up / cool-down
+			# run for cool-down period before stopping
+			# cooldown end time is updated while generator is running
+			#	and generator feeds Multi AC input
+			if self._currentTime < self._coolDownEndTime:
+				if state != States.COOLDOWN:
 					self._dbusservice['/State'] = States.COOLDOWN
-					self._stoptime = monotonic_time.monotonic_time().to_seconds_double()
+					self.log_info ("starting cool-down")
+				return
 
-					# Remove load from Generator
-					if self._ac1_is_generator:
-						self._set_ignore_ac1(True)
-					if self._ac2_is_generator:
-						self._set_ignore_ac2(True)
-
-					return
-				elif state == States.COOLDOWN:
-					if monotonic_time.monotonic_time().to_seconds_double() - \
-							self._stoptime <= self._settings['cooldowntime']:
-						return # Don't stop engine yet
-
-			# When we arrive here, a stop command was given during warmup, the
-			# cooldown timer expired, or no cooldown was configured. Stop
-			# the engine, but if we're coming from cooldown, delay another
+			# When we arrive here, a stop command was given and cool-down period has elapesed
+			# Stop the engine, but if we're coming from cooldown, delay another
 			# while in the STOPPING state before reactivating AC-in.
 			if state == States.COOLDOWN:
+				self.log_info ("starting post cool-down")
+				# delay restoring load to give generator a chance to stop
+				self._postCoolDownEndTime = self._currentTime + WAIT_FOR_ENGINE_STOP
 				self._dbusservice['/State'] = States.STOPPING
 				self._update_remote_switch() # Stop engine
+				self.log_info('Stopping generator that was running by %s condition' %
+							str(self._dbusservice['/RunningByCondition']))
 				return
-			elif state == States.STOPPING:
-				if monotonic_time.monotonic_time().to_seconds_double() - \
-						self._stoptime <= self._settings['cooldowntime'] + WAIT_FOR_ENGINE_STOP:
-					return # Wait for engine stop
+				
+			# Wait for engine stop
+			if state == States.STOPPING:
+				if self._currentTime < self._postCoolDownEndTime:
+					return
+				else:
+					self.log_info ("post cool-down delay complete")
+
+			# generator stop was reported when entering post cool-down
+			#	don't report it again
+			else:
+				self.log_info('Stopping generator that was running by %s condition' %
+							str(self._dbusservice['/RunningByCondition']))
 
 			# All other possibilities are handled now. Cooldown is over or not
 			# configured and we waited for the generator to shut down.
 			self._dbusservice['/State'] = States.STOPPED
 			self._update_remote_switch()
-			self._set_ignore_ac1(False)
-			self._set_ignore_ac2(False)
-			self.log_info('Stopping generator that was running by %s condition' %
-						str(self._dbusservice['/RunningByCondition']))
+#### end ExtTransferSwitch warm-up / cool-down
+			self._dbusservice['/State'] = States.STOPPED
 			self._dbusservice['/RunningByCondition'] = ''
 			self._dbusservice['/RunningByConditionCode'] = RunningConditions.Stopped
 			self._update_accumulated_time()
@@ -1157,15 +1240,36 @@ class StartStop(object):
 			self._manualstarttimer = 0
 			self._last_runtime_update = 0
 
-	@property
-	def _ac1_is_generator(self):
-		return self._dbusmonitor.get_value('com.victronenergy.settings',
-			'/Settings/SystemSetup/AcInput1') == 2
+	# This is here so the Multi/Quattro can be told to disconnect AC-in,
+	# so that we can do warm-up and cool-down.
+#### ExtTransferSwitch warm-up / cool-down
+	# there may be two AC inputs (Quattro). process both
 
-	@property
-	def _ac2_is_generator(self):
-		return self._dbusmonitor.get_value('com.victronenergy.settings',
-			'/Settings/SystemSetup/AcInput2') == 2
+	def _ignore_ac (self, state):
+			self._activeAcInIsIgnored = state
+			state1 = False
+			state2 = False
+			if self._generatorAcInput == 1:
+				state1 = state
+			elif self._generatorAcInput == 2:
+				state2 = state
+
+			if state1 != self._ac1isIgnored:
+				if state1:
+					self.log_info ("shedding load - AC input 1")
+				else:
+					self.log_info ("restoring load - AC input 1")
+				self._set_ignore_ac1 (state1)
+				self._ac1isIgnored = state1
+
+			if state2 != self._ac2isIgnored:
+				if state2:
+					self.log_info ("shedding load - AC input 2")
+				else:
+					self.log_info ("restoring load - AC input 2")
+				self._set_ignore_ac2 (state2)
+				self._ac2isIgnored = state2
+
 
 	def _set_ignore_ac1(self, ignore):
 		# This is here so the Multi/Quattro can be told to disconnect AC-in,
@@ -1181,6 +1285,11 @@ class StartStop(object):
 		# Engine should be started in these states
 		v = self._dbusservice['/State'] in (States.RUNNING, States.WARMUP, States.COOLDOWN)
 		self._set_remote_switch_state(dbus.Int32(v, variant_level=1))
+#### ExtTransferSwitch
+		if v == True:
+			logging.info ("updating remote switch to running")
+		else:
+			logging.info ("updating remote switch to stopped")
 
 	def _get_remote_switch_state(self):
 		raise Exception('This function should be overridden')

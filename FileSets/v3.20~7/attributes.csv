@@ -92,6 +92,12 @@ com.victronenergy.vebus,/Energy/InverterToAcIn2,d,kWh,88,uint32,100,R
 com.victronenergy.vebus,/Energy/InverterToAcOut,d,kWh,90,uint32,100,R
 com.victronenergy.vebus,/Energy/OutToInverter,d,kWh,92,uint32,100,R
 com.victronenergy.vebus,/VebusChargeState,u,0=Initialising;1=Bulk;2=Absorption;3=Float;4=Storage;5=Absorb repeat;6=Forced absorb;7=Equalise;8=Bulk stopped;9=Unknown,95,uint16,1,R
+com.victronenergy.vebus,/Hub4/L1/AcPowerSetpoint,d,W,96,int32,1,W
+com.victronenergy.vebus,/Hub4/L2/AcPowerSetpoint,d,W,98,int32,1,W
+com.victronenergy.vebus,/Hub4/L3/AcPowerSetpoint,d,W,100,int32,1,W
+com.victronenergy.vebus,/Dc/0/PreferRenewableEnergy,i,0=Not preferred;1=Preferred,102,uint16,1,W
+com.victronenergy.vebus,/Ac/Control/RemoteGeneratorSelected,i,0=Generator not selected;1=Generator selected,103,uint16,1,W
+com.victronenergy.vebus,/Ac/State/RemoteGeneratorSelected,i,0=Generator not selected;1=Generator selected,104,uint16,1,R
 com.victronenergy.battery,/Dc/0/Power,i,W,258,int16,1,R
 com.victronenergy.battery,/Dc/0/Voltage,d,V DC,259,uint16,100,R
 com.victronenergy.battery,/Dc/1/Voltage,d,V DC,260,uint16,100,R
@@ -234,6 +240,10 @@ com.victronenergy.solarcharger,/Pv/2/P,d,W,3726,uint16,1,R
 com.victronenergy.solarcharger,/Pv/3/P,d,W,3727,uint16,1,R
 com.victronenergy.solarcharger,/Yield/User,d,kWh,3728,uint32,1,R
 com.victronenergy.solarcharger,/Yield/Power,d,W,3730,uint16,1,R
+com.victronenergy.solarcharger,/Pv/0/MppOperationMode,i,0=Off;1=Voltage/current limited;2=MPPT active;255=Not available,3731,uint16,1,R
+com.victronenergy.solarcharger,/Pv/1/MppOperationMode,i,0=Off;1=Voltage/current limited;2=MPPT active;255=Not available,3732,uint16,1,R
+com.victronenergy.solarcharger,/Pv/2/MppOperationMode,i,0=Off;1=Voltage/current limited;2=MPPT active;255=Not available,3733,uint16,1,R
+com.victronenergy.solarcharger,/Pv/3/MppOperationMode,i,0=Off;1=Voltage/current limited;2=MPPT active;255=Not available,3734,uint16,1,R
 com.victronenergy.system,/Ac/PvOnOutput/L1/Power,d,W,808,uint16,1,R
 com.victronenergy.system,/Ac/PvOnOutput/L2/Power,d,W,809,uint16,1,R
 com.victronenergy.system,/Ac/PvOnOutput/L3/Power,d,W,810,uint16,1,R
@@ -289,6 +299,9 @@ com.victronenergy.pvinverter,/Ac/L3/Energy/Forward,u,kWh,1050,uint32,100,R
 com.victronenergy.pvinverter,/Ac/Power,i,kW,1052,int32,1,W
 com.victronenergy.pvinverter,/Ac/MaxPower,u,kW,1054,uint32,1,W
 com.victronenergy.pvinverter,/Ac/PowerLimit,u,kW,1056,uint32,1,W
+com.victronenergy.pvinverter,/Ac/L1/Power,i,W,1058,uint32,1,R
+com.victronenergy.pvinverter,/Ac/L2/Power,i,W,1060,uint32,1,R
+com.victronenergy.pvinverter,/Ac/L3/Power,i,W,1062,uint32,1,R
 com.victronenergy.motordrive,/Motor/RPM,d,RPM,2048,int16,1,R
 com.victronenergy.motordrive,/Motor/Temperature,d,Degrees celsius,2049,int16,10,R
 com.victronenergy.motordrive,/Dc/0/Voltage,d,V DC,2050,uint16,100,R
@@ -335,11 +348,14 @@ com.victronenergy.grid,/Ac/L2/Energy/Reverse,d,kWh,2630,uint32,100,R
 com.victronenergy.grid,/Ac/L3/Energy/Reverse,d,kWh,2632,uint32,100,R
 com.victronenergy.grid,/Ac/Energy/Forward,d,kWh,2634,uint32,100,R
 com.victronenergy.grid,/Ac/Energy/Reverse,d,kWh,2636,uint32,100,R
+com.victronenergy.grid,/Ac/L1/Power,d,W,2638,int32,1,R
+com.victronenergy.grid,/Ac/L2/Power,d,W,2640,int32,1,R
+com.victronenergy.grid,/Ac/L3/Power,d,W,2642,int32,1,R
 com.victronenergy.settings,/Settings/CGwacs/AcPowerSetPoint,d,W,2700,int16,1,W
 com.victronenergy.settings,/Settings/CGwacs/AcPowerSetPoint,d,W,2703,int16,0.01,W
 com.victronenergy.settings,/Settings/CGwacs/MaxChargePercentage,d,%,2701,uint16,1,W
 com.victronenergy.settings,/Settings/CGwacs/MaxDischargePercentage,d,%,2702,uint16,1,W
-com.victronenergy.settings,/Settings/CGwacs/MaxDischargePower,d,W,2704,uint16,0.1,W
+com.victronenergy.settings,/Settings/CGwacs/MaxDischargePower,d,W,2704,int16,0.1,W
 com.victronenergy.settings,/Settings/SystemSetup/MaxChargeCurrent,d,A,2705,int16,1,W
 com.victronenergy.settings,/Settings/CGwacs/MaxFeedInPower,d,W,2706,int16,0.01,W
 com.victronenergy.settings,/Settings/CGwacs/OvervoltageFeedIn,i,0=Don't feed excess DC-coupled PV into grid;1=Feed excess DC-coupled PV into the grid,2707,uint16,1,W
@@ -401,6 +417,10 @@ com.victronenergy.inverter,/Pv/1/P,d,W,3165,uint16,1,R
 com.victronenergy.inverter,/Pv/2/P,d,W,3166,uint16,1,R
 com.victronenergy.inverter,/Pv/3/P,d,W,3167,uint16,1,R
 com.victronenergy.inverter,/Alarms/LowSoc,u,,3168,uint16,1,R
+com.victronenergy.inverter,/Pv/0/MppOperationMode,i,0=Off;1=Voltage/current limited;2=MPPT active;255=Not available,3169,uint16,1,R
+com.victronenergy.inverter,/Pv/1/MppOperationMode,i,0=Off;1=Voltage/current limited;2=MPPT active;255=Not available,3170,uint16,1,R
+com.victronenergy.inverter,/Pv/2/MppOperationMode,i,0=Off;1=Voltage/current limited;2=MPPT active;255=Not available,3171,uint16,1,R
+com.victronenergy.inverter,/Pv/3/MppOperationMode,i,0=Off;1=Voltage/current limited;2=MPPT active;255=Not available,3172,uint16,1,R
 com.victronenergy.genset,/ProductId,u,,3212,uint16,1,R
 com.victronenergy.genset,/StatusCode,u,0=Standby;1=Startup 1;2=Startup 2;3=Startup 3;4=Startup 4;5=Startup 5;6=Startup 6;7=Startup 7;8=Running;9=Stopping;10=Error,3213,uint16,1,R
 com.victronenergy.genset,/ErrorCode,u,0=No error;1=AC voltage L1 too low;2=AC frequency L1 too low;3=AC current too low;4=AC power too low;5=Emergency stop;6=Servo current too low;7=Oil pressure too low;8=Engine temperature too low;9=Winding temperature too low;10=Exhaust temperature too low;13=Starter current too low;14=Glow current too low;15=Glow current too low;16=Fuel holding magnet current too low;17=Stop solenoid hold coil current too low;18=Stop solenoid pull coil current too low;19=Optional DC out current too low;20=5V output voltage too low;21=Boost output current too low;22=Panel supply current too high;25=Starter battery voltage too low;26=Startup aborted (rotation too low);28=Rotation too low;29=Power contactor current too low;30=AC voltage L2 too low;31=AC frequency L2 too low;32=AC current L2 too low;33=AC power L2 too low;34=AC voltage L3 too low;35=AC frequency L3 too low;36=AC current L3 too low;37=AC power L3 too low;62=Fuel temperature too low;63=Fuel level too low;65=AC voltage L1 too high;66=AC frequency too high;67=AC current too high;68=AC power too high;70=Servo current too high;71=Oil pressure too high;72=Engine temperature too high;73=Winding temperature too high;74=Exhaust temperature too low;77=Starter current too low;78=Glow current too high;79=Glow current too high;80=Fuel holding magnet current too high;81=Stop solenoid hold coil current too high;82=Stop solenoid pull coil current too high;83=Optional DC out current too high;84=5V output voltage too high;85=Boost output current too high;89=Starter battery voltage too high;90=Startup aborted (rotation too high);92=Rotation too high;93=Power contactor current too high;94=AC voltage L2 too high;95=AC frequency L2 too high;96=AC current L2 too high;97=AC power L2 too high;98=AC voltage L3 too high;99=AC frequency L3 too high;100=AC current L3 too high;101=AC power L3 too high;126=Fuel temperature too high;127=Fuel level too high;130=Lost control unit;131=Lost panel;132=Service needed;133=Lost 3-phase module;134=Lost AGT module;135=Synchronization failure;137=Intake airfilter;139=Lost sync. module;140=Load-balance failed;141=Sync-mode deactivated;142=Engine controller;148=Rotating field wrong;149=Fuel level sensor lost;150=Init failed;151=Watchdog;152=Out: winding;153=Out: exhaust;154=Out: Cyl. head;155=Inverter over temperature;156=Inverter overload;157=Inverter communication lost;158=Inverter sync failed;159=CAN communication lost;160=L1 overload;161=L2 overload;162=L3 overload;163=DC overload;164=DC overvoltage;165=Emergency stop;166=No connection,3214,uint16,1,R
@@ -440,7 +460,7 @@ com.victronenergy.pulsemeter,/Count,i,,3402,uint32,1,R
 com.victronenergy.digitalinput,/Count,i,,3420,uint32,1,R
 com.victronenergy.digitalinput,/State,i,,3422,uint16,1,R
 com.victronenergy.digitalinput,/Alarm,i,0=No alarm;2=Alarm,3423,uint16,1,R
-com.victronenergy.digitalinput,/Type,i,2=Door;3=Bilge pump;4=Bilge alarm;5=Burglar alarm;6=Smoke alarm;7=Fire alarm;8=CO2 alarm;9=Generator,3424,uint16,1,R
+com.victronenergy.digitalinput,/Type,i,2=Door;3=Bilge pump;4=Bilge alarm;5=Burglar alarm;6=Smoke alarm;7=Fire alarm;8=CO2 alarm;9=Generator,3424,uint16,1,R;11=ExtTransferSwitch,3424,uint16,1,R
 com.victronenergy.generator,/ManualStart,i,0=Stop generator;1=Start generator,3500,uint16,1,W
 com.victronenergy.generator,/RunningByConditionCode,i,0=Stopped;1=Manual;2=TestRun;3=LossOfComms;4=Soc;5=AcLoad;6=BatteryCurrent;7=BatteryVoltage;8=InverterTemperatur;9=InverterOverload;10=StopOnAc1,3501,uint16,1,R
 com.victronenergy.generator,/Runtime,i,seconds,3502,uint16,1,R
@@ -450,6 +470,8 @@ com.victronenergy.generator,/State,i,0=Stopped;1=Running;10=Error,3506,uint16,1,
 com.victronenergy.generator,/Error,i,0=No Error;1=Remote disabled;2=Remote fault,3507,uint16,1,R
 com.victronenergy.generator,/Alarms/NoGeneratorAtAcIn,i,0=No Alarm;2=Alarm,3508,uint16,1,R
 com.victronenergy.generator,/AutoStartEnabled,i,0=Autostart disabled;1=Autostart enabled,3509,uint16,1,W
+com.victronenergy.generator,/ServiceCounter,u,seconds,3510,uint32,1,R
+com.victronenergy.generator,/ServiceCounterReset,u,1=Reset,3512,uint16,1,W
 com.victronenergy.meteo,/Irradiance,d,W/m^2,3600,uint16,10,R
 com.victronenergy.meteo,/WindSpeed,d,m/s,3601,uint16,10,R
 com.victronenergy.meteo,/CellTemperature,d,Degrees celsius,3602,int16,10,R
@@ -635,6 +657,10 @@ com.victronenergy.multi,/Pv/2/P,d,W,4600,uint16,1,R
 com.victronenergy.multi,/Pv/3/P,d,W,4601,uint16,1,R
 com.victronenergy.multi,/Alarms/LowSoc,u,,4602,uint16,1,R
 com.victronenergy.multi,/Yield/User,d,kWh,4603,uint32,1,R
+com.victronenergy.multi,/Pv/0/MppOperationMode,i,0=Off;1=Voltage/current limited;2=MPPT active;255=Not available,4605,uint16,1,R
+com.victronenergy.multi,/Pv/1/MppOperationMode,i,0=Off;1=Voltage/current limited;2=MPPT active;255=Not available,4606,uint16,1,R
+com.victronenergy.multi,/Pv/2/MppOperationMode,i,0=Off;1=Voltage/current limited;2=MPPT active;255=Not available,4607,uint16,1,R
+com.victronenergy.multi,/Pv/3/MppOperationMode,i,0=Off;1=Voltage/current limited;2=MPPT active;255=Not available,4608,uint16,1,R
 com.victronenergy.pump,/State,d,0=Stopped;1=Running,4700,uint16,1,R
 com.victronenergy.settings,/Settings/Pump0/AutoStartEnabled,d,0=Disabled;1=Enabled,4701,uint16,1,W
 com.victronenergy.settings,/Settings/Pump0/Mode,d,0=Auto;1=On;2=Off,4702,uint16,1,W

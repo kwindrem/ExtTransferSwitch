@@ -1210,18 +1210,22 @@ class StartStop(object):
 				return
 				
 			# Wait for engine stop
-			elif state == States.STOPPING:
+			if state == States.STOPPING:
 				if self._currentTime < self._postCoolDownEndTime:
 					return
 				else:
 					self.log_info ("post cool-down delay complete")
 
-			# All other possibilities are handled now. Cooldown is over or not
-			# configured and we waited for the generator to shut down.
-			if state != States.STOPPING:
-				self._update_remote_switch()
+			# generator stop was reported when entering post cool-down
+			#	don't report it again
+			else:
 				self.log_info('Stopping generator that was running by %s condition' %
 							str(self._dbusservice['/RunningByCondition']))
+
+			# All other possibilities are handled now. Cooldown is over or not
+			# configured and we waited for the generator to shut down.
+			self._dbusservice['/State'] = States.STOPPED
+			self._update_remote_switch()
 #### end ExtTransferSwitch warm-up / cool-down
 			self._dbusservice['/State'] = States.STOPPED
 			self._dbusservice['/RunningByCondition'] = ''
@@ -1278,6 +1282,11 @@ class StartStop(object):
 		# Engine should be started in these states
 		v = self._dbusservice['/State'] in (States.RUNNING, States.WARMUP, States.COOLDOWN)
 		self._set_remote_switch_state(dbus.Int32(v, variant_level=1))
+#### ExtTransferSwitch
+		if v == True:
+			logging.info ("updating remote switch to running")
+		else:
+			logging.info ("updating remote switch to stopped")
 
 	def _get_remote_switch_state(self):
 		raise Exception('This function should be overridden')

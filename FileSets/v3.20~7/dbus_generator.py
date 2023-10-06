@@ -111,6 +111,8 @@ class Generator(object):
 			'socenabled': ['/Settings/{0}/Soc/Enabled', 0, 0, 1],
 			'socstart': ['/Settings/{0}/Soc/StartValue', 80, 0, 100],
 			'socstop': ['/Settings/{0}/Soc/StopValue', 90, 0, 100],
+			'socstarttimer': ['/Settings/{0}/Soc/StartTimer', 0, 0, 10000],
+			'socstoptimer': ['/Settings/{0}/Soc/StopTimer', 0, 0, 10000],
 			'qh_socstart': ['/Settings/{0}/Soc/QuietHoursStartValue', 90, 0, 100],
 			'qh_socstop': ['/Settings/{0}/Soc/QuietHoursStopValue', 90, 0, 100],
 			# Voltage
