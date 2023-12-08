@@ -61,8 +61,13 @@ If you wish to prevent the generator from running when On Grid, make sure the sy
 
 Installation:
 
-The easiest way to install this or other of my packages is to first install SetupHelper,
-then use its package install tool. Refer to the SetupHelper ReadMe for instructions.
+ExtTransferSwitch requires that SetupHelper is installed first.
+
+The easiest way to install ExtTransferSwitch is to do a "blind install" of SetupHelper
+	and then add the ExtTransferSwitch package via the PackageManager menus.
+
+Refer to the SetupHelper ReadMe for instructions and for other install options:
+	https://github.com/kwindrem/SetupHelper
 
 
 Background / internals :

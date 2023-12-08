@@ -64,6 +64,18 @@ fi
 if [ $scriptAction == 'UNINSTALL' ] ; then
     logMessage "++ Uninstalling ExtTransferSwitch"
 
+	# disable Ext Transfer Switch digital input
+	# if not disabled dbus-digitalinputs will crash !!!
+	digInputs=($(dbus -y | grep '.digitalinput.'))
+	for digIn in ${digInputs[@]} ; do
+		state=($(dbus -y $digIn /State GetValue ))
+		if (( $state == 12 )) || (( $state == 13 )) ; then
+			logMessage "disabling External Transfer Switch digital input $digIn"
+			digInNumber=($(dbus -y $digIn /DeviceInstance GetValue ))
+			dbus -y com.victronenergy.settings /Settings/DigitalInput/$digInNumber/Type SetValue 0 &> /dev/null
+		fi
+	done
+
 	restoreActiveFile "/opt/victronenergy/gui/qml/PageDigitalInput.qml"
 	restoreActiveFile "/opt/victronenergy/gui/qml/MbItemDigitalInput.qml"
 	restoreActiveFile "/opt/victronenergy/dbus-digitalinputs/dbus_digitalinputs.py"
