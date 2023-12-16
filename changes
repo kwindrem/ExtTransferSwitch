@@ -1,3 +1,6 @@
+v2.36:
+	add support for v3.20~34
+
 v2.35:
 	fixed: dbus-digitalinput crashs after uninstalling ExtTransferSwitch
 	fixed: Ac input selection in External AC Input transfer switch menu displays improperly
