@@ -10,6 +10,11 @@
 
 packageLogFile="/var/log/ExtTransferSwitch/current"
 
+#### TODO: add update SetupHelper call and exit if it's being updated
+#### TODO: add new exit code for setup helper too old
+#		this won't help with initial installs but it'll be there for future updates
+
+
 #### following lines incorporate SetupHelper utilities into this script
 # Refer to the SetupHelper ReadMe file for details.
     
