@@ -1,3 +1,6 @@
+v3.0:
+	incorporate SetupHelper v6 enhancements
+
 v2.39:
 	fixed bad file set for v3.20~40
 
